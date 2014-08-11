@@ -9,7 +9,7 @@ import numpy as np
 from matplotlib.ticker import MultipleLocator
 
 # ----------------------------------------------------------------------
-def getStats(data,SpanJobAverage=-1,waverage,dim=0):
+def getStats(data,SpanJobAverage=-1,waverage=False,dim=0):
     ''' Get the average and error of all columns in the data matrix. '''
 
     #SpanJobAverage tells whether the estimator file contains the Bins
@@ -20,14 +20,14 @@ def getStats(data,SpanJobAverage=-1,waverage,dim=0):
            dataAve  = sum(data[:,:-1]*data[:,-1][:,newaxis],dim)/(1.0*sum(data[:,-1])) 
            dataErr = std(data[:,:-1],0)/sqrt(len(data[:,0])-1.0) 
         elif waverage:
-            vals = data[0::2]
-            errs = data[1::2]
+            vals = data[:,0::2]
+            errs = data[:,1::2]
             weights = 1.0/(errs*errs)
             
             # Little hack of the average function to compute the weighted std
             # http://en.wikipedia.org/wiki/Weighted_arithmetic_mean#Dealing_with_variance
-            dataErr  = np.sqrt(1.0/numpy.average(1.0/weights, weights=weights))
-            dataAve  = np.average(vals,weights=weights,dim) 
+            dataErr  = np.sqrt(1.0/(np.average(1.0/weights,axis=dim, weights=weights)/weights.shape[0]))
+            dataAve  = np.average(vals,axis=dim,weights=weights) 
         else:
             dataAve  = average(data,dim) 
             bins = MCstat.bin(data) 
@@ -185,7 +185,7 @@ def main():
             param.append(float(ssexy.params[ID][options.reduce]))
         lab = ''
         options_dic = vars(options)
-        for item in ['x','y','r','T','B']:
+        for item in ['x','y','r','T','b']:
             if options_dic[item]:
                lab += r'%s=%s \,' %(parMap[item],options_dic[item])
 
