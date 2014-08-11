@@ -65,11 +65,13 @@ def main():
         else:     y2 = unumpy.uarray(y,dy)
 
         errorbar(x, y, dy,\
-                marker='s',mec=colors[i],mfc=colors[i],color=colors[i],\
-                ls='',capsize=4,label=r'$\mathrm{%s}$' %sReduce.getTupleIdstr(order))
+                marker='s',
+                
+                #mec=colors[i%len(colors)],mfc=colors[i%len(colors)],color=colors[i%len(colors)],\
+                ls='',capsize=4)#,label=r'$\mathrm{%s}$' %sReduce.getTupleIdstr(order))
 
-    deltay = y2-y1  
-    y  = np.absolute(unumpy.nominal_values(deltay), unumpy.std_devs(deltay))
+    #deltay = y2-y1  
+    #y  = np.absolute(unumpy.nominal_values(deltay), unumpy.std_devs(deltay))
     #ax.plot(x, y,  marker='s',mec=colors[i],mfc=colors[i],color=colors[i],\
     #     ls='',label=r'$\mathrm{%s}$' %sReduce.getTupleIdstr(order))
     if  args.estimator=='SS':
