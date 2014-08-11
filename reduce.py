@@ -24,10 +24,11 @@ def getStats(data,SpanJobAverage=-1,waverage=False,dim=0):
             errs = data[:,1::2]
             weights = 1.0/(errs*errs)
             
-            # Little hack of the average function to compute the weighted std
             # http://en.wikipedia.org/wiki/Weighted_arithmetic_mean#Dealing_with_variance
-            dataErr  = np.sqrt(1.0/(np.average(1.0/weights,axis=dim, weights=weights)/weights.shape[0]))
-            dataAve  = np.average(vals,axis=dim,weights=weights) 
+            dataErr  = np.sqrt(1.0/np.sum(weights,axis=dim))
+            dataAve  = np.average(vals,axis=0,weights=weights) 
+            # Little hack of the average function to compute the weighted std
+            #dataErr  = np.sqrt(np.average(1.0/weights,axis=dim, weights=weights)/weights.shape[0])
         else:
             dataAve  = average(data,dim) 
             bins = MCstat.bin(data) 
@@ -130,7 +131,7 @@ def main():
     # define the mapping between short names and label names 
     parMap = {'x': r'L_x',
               'y': r'L_y',
-              'b': r'\beta',
+              'B': r'\beta',
               'T': r'T',
               'r': r'r',
               'a': r'N_A'}
@@ -185,7 +186,7 @@ def main():
             param.append(float(ssexy.params[ID][options.reduce]))
         lab = ''
         options_dic = vars(options)
-        for item in ['x','y','r','T','b']:
+        for item in ['x','y','r','T','B']:
             if options_dic[item]:
                lab += r'%s=%s \,' %(parMap[item],options_dic[item])
 
