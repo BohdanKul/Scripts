@@ -55,7 +55,6 @@ def CreateFileSkipping(FromfileName,oldSSEXYID,newSSEXYID,skip=0,average=False,w
     inList,numLines = ReadSkipping(FromfileName,skip)
     if inList == 0:
        return 0
-     
     # get the output file name and open the file for writing
     outName = FromfileName.replace(str(oldSSEXYID),str(newSSEXYID))
     outFile = open('MERGED/' + outName,'w');
