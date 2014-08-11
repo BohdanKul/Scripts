@@ -53,8 +53,8 @@ def CreateFileSkipping(FromfileName,oldSSEXYID,newSSEXYID,skip=0,average=False,w
 
     #Read the measurements we want to keep
     inList,numLines = ReadSkipping(FromfileName,skip)
-    if inList == 0:
-       return 0
+    if len(inList) == 0:
+       return '',0
     # get the output file name and open the file for writing
     outName = FromfileName.replace(str(oldSSEXYID),str(newSSEXYID))
     outFile = open('MERGED/' + outName,'w');
@@ -103,8 +103,8 @@ def addFromToSkipping(FromfileName,outFile,skip=0,average=False,waverage=False):
     #Read the measurements we want to keep
     inList,numLines = ReadSkipping(FromfileName,skip)
 
-    if inList == 0:
-       return -1
+    if len(inList) == 0:
+       return 0
 
     #Write them
     if len(inList) != 0:
@@ -150,7 +150,7 @@ def mergeData(ssexy,type,newID,skip=0,isRestarted=False,ssexyIds=None,average=Fa
            if not fileExist:
                print fname
                outFile,numLines = CreateFileSkipping(fname,ssexyIds[0],newID,skip,average,waverage)
-               fileExist = (outFile != 0) 
+               fileExist = (outFile != '') 
                #taken it is a restarted job, if there is less measurements than we want to skip in 
                #the first file we will need to skip more in the files that follow
                if (isRestarted) and (numLines < 0):
