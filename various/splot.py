@@ -8,6 +8,8 @@
 import matplotlib
 #matplotlib.use('TKAgg')
 
+from uncertainties import ufloat 
+from uncertainties import umath 
 import MCstat
 import zipfile
 import os,sys
@@ -16,7 +18,6 @@ import loadgmt,kevent
 from pylab import *
 import argparse
 import pimchelp
-import savefig
 import mplrc 
 import numpy as np
 import MCstat
@@ -81,6 +82,8 @@ def GetHeaderNumber(fileName,header):
     col = list([headers.index(header)])
     return col
 
+def H(p):
+    return -p*np.log(p)/np.log(2.0) - (1.0-p)*np.log(1.0-p)/np.log(2.0)
 # -----------------------------------------------------------------------------
 # Begin Main Program 
 # -----------------------------------------------------------------------------
@@ -97,7 +100,6 @@ def main():
                         average. default=50', type=int, default=50)
 
     args = parser.parse_args()
-
     fileNames = args.fileNames
     if len(fileNames) < 1:
         parser.error("Need to specify at least one scalar estimator file")
@@ -109,9 +111,9 @@ def main():
     if toSort:     
        fileNames.sort()
     
-    ref = [-0.5624,-0.5535,-0.5457,-0.4984,-0.2656]
     ffile = open(fileNames[0],'r')
     headers = ffile.readline().lstrip('#').split()
+    headers += ['srt']
     print headers
 
     # If we don't choose an estimator, provide a list of possible ones
@@ -131,33 +133,58 @@ def main():
     fig = figure(1,figsize=(13,6))
     ax = subplot(111)
     connect('key_press_event',kevent.press)
-    
-    rcParams.update(mplrc.aps['params'])
+   
+    #rcParams.update(mplrc.aps['params'])
     n = 0
+    E0 = 0
+    Es  = []
+    dEs = []
     for i,fileName in enumerate(fileNames):
         dataFile  = open(fileName,'r');
         dataLines = dataFile.readlines();
 
         if len(dataLines) > 2:
             params = GetFileParams(fileName)
-            col    = GetHeaderNumber(fileName,args.estimator)
-            data = loadtxt(fileName,usecols=col)
+            if  args.estimator == 'srt':
+                col    = GetHeaderNumber(fileName,'nAred')
+                dataR = loadtxt(fileName,usecols=col)
+                col    = GetHeaderNumber(fileName,'nAext')
+                dataE = loadtxt(fileName,usecols=col)
+                    
+                daveR = amax(MCstat.bin(dataR[args.skip:]),axis=0)
+                aveR  = average(dataR[args.skip:])
+                daveE = amax(MCstat.bin(dataE[args.skip:]),axis=0)
+                aveE  = average(dataE[args.skip:])
+                #S2 = -umath.log(ufloat(aveE,daveE)/ufloat(aveR,daveR))
+                S2 = ufloat(aveE,daveE)/ufloat(aveR,daveR)
+                print 'Entropy = ', S2
+                Es  += [S2.n]
+                dEs += [S2.s]
+            else:
+                col    = GetHeaderNumber(fileName,args.estimator)
+                data = loadtxt(fileName,usecols=col)
 
-            ID = fileName[-14:-4]
-            if size(data) > 1:
-                sma = simpleMovingAverage(args.period,data[args.skip:])
-                ax.plot(sma,color=colors[i%len(colors)],linewidth=3,linestyle='-',label=r'$T = %s$' %params['T'])
-                #ax.plot([0,len(sma)],[ref[i],ref[i]],color=colors[i],linewidth=1,marker='None',linestyle='-')
-                bins = MCstat.bin(data[args.skip:]) 
-                dataErr = amax(bins,axis=0)
-                dataAve = average(data[args.skip:])
-                print 'T= %s %0.6f +/- %0.6f ' %(params['T'],dataAve,dataErr)
-
+                ID = fileName[-14:-4]
+                if  size(data) > 1:
+                    sma = simpleMovingAverage(args.period,data[args.skip:])
+                    ax.plot(sma,color=colors[i%len(colors)],linewidth=3,linestyle='-',label=r'$T = %s$' %params['T'])
+                    bins = MCstat.bin(data[args.skip:]) 
+                    dataErr = amax(bins,axis=0)
+                    dataAve = average(data[args.skip:])
+                    
+                    #ax.plot(bins,color=colors[i%len(colors)],linewidth=1,marker='None',linestyle='-')
+                    #if E0 == 0: E0 = dataAve
+                    print 'T= %s %0.6f +/- %0.6f ' %(params['T'],dataAve-E0,dataErr)
+                    #print dataAve-E0
+                    Es  += [dataAve]
+                    dEs += [dataErr[0]]
         else:
             print '%s contains no measurements' %fileName
     xlabel('MC bins (p=%s)' %args.period)
     ylabel(args.estimator)
     #tight_layout()
+    print Es
+    print dEs
     legend() 
     show()
 

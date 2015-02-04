@@ -29,7 +29,7 @@ def FreeLog2(x,a,b):
 def main():
 
     parser = argparse.ArgumentParser(description='Scaling analysis of MI as function of Beta')
-    parser.add_argument('fileNames',             help='Scalar estimator files', nargs='+')
+    parser.add_argument('fileNames',             help='MI files', nargs='+')
     args = parser.parse_args() 
 
 
@@ -86,9 +86,9 @@ def main():
         #cdfs      = special.chdtrc(dof,chisq)
 
     for i in range(nfit):
-        axs[i].errorbar(1.0/Beta,LogCoeff[:,i],dLogCoeff[:,i], label=r"$\mathrm{a+b*log(L)/L+c/L}$")
+        axs[i].errorbar(Beta,LogCoeff[:,i],dLogCoeff[:,i], label=r"$\mathrm{a+b*log(L)/L+c/L}$")
         #axs[i].set_xlabel(r'$\mathrm{\beta}[K^{-1}]$')
-        axs[i].set_xlabel(r'$\mathrm{T}[K]$')
+        axs[i].set_xlabel(r'$\mathrm{\beta}[K^{-1}]$')
         axs[i].set_ylabel(r'$\mathrm{%s}$' %cfits[i])
     axs[i].legend(loc=4)
     

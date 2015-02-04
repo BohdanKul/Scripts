@@ -125,7 +125,7 @@ def main():
     # Create subplots grid
     fig,axm  = subplots(nraw,ncolumn)
     connect('key_press_event',kevent.press)
-    rcParams.update(mplrc.aps['params'])
+    #rcParams.update(mplrc.aps['params'])
     
     # Label subplots grid
     i = 0
@@ -149,6 +149,7 @@ def main():
             i += 1
     non0index = index
 
+    print axm
     # Get the data
     order = ['Lx','Ly','T','b']
     

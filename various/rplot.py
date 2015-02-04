@@ -45,7 +45,7 @@ def main():
         
     rvariable = headers[0]
 
-    rcParams.update(mplrc.aps['params'])
+    #rcParams.update(mplrc.aps['params'])
     colors = ["#66CAAE", "#CF6BDD", "#E27844", "#7ACF57", "#92A1D6", "#E17597", "#C1B546",'b']
 
     figure(1,(8,6))

@@ -4,7 +4,7 @@ from numpy import array
 import argparse
 
 def main(): 
-    parser = argparse.ArgumentParser(description='Plot Raw MC Equilibration Data for Scalar Estimators.')
+    parser = argparse.ArgumentParser(description='Determine optimal delta A for SRT.')
     parser.add_argument('-L', help='Length', type=int)
 
     args = parser.parse_args()
