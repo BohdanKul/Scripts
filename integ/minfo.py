@@ -299,13 +299,13 @@ def main():
             #print "A x e^(-B) - C"
             #print "C=%0.3f +/- %0.3f" %(C,errs[0])
 
-            coeff, var_matrix = curve_fit(RenyiCorrection2b,np.array(BetaZ)[flshift:fhshift],S2n[flshift:fhshift],p0=(B,C))
-            (B,C) = coeff
-            errs = np.sqrt(var_matrix.diagonal())
-            S2pred  = RenyiCorrection2b(np.array(BetaZ),B,C)[flshift:fhshift]
-            ax1.plot(BetaZ[flshift:fhshift], S2pred, linewidth = 2, label = r"$\mathrm{f(\Delta) e^{-\beta*g(\Delta)}-C}$")
-            print "f(Delta) x e^(-g(Delta)) - C"
-            print "Delta=%0.3f +/- %0.3f C=%0.3f +/- %0.3f" %(B,errs[0],C,errs[1])
+            #coeff, var_matrix = curve_fit(RenyiCorrection2b,np.array(BetaZ)[flshift:fhshift],S2n[flshift:fhshift],p0=(B,C))
+            #(B,C) = coeff
+            #errs = np.sqrt(var_matrix.diagonal())
+            #S2pred  = RenyiCorrection2b(np.array(BetaZ),B,C)[flshift:fhshift]
+            #ax1.plot(BetaZ[flshift:fhshift], S2pred, linewidth = 2, label = r"$\mathrm{f(\Delta) e^{-\beta*g(\Delta)}-C}$")
+            #print "f(Delta) x e^(-g(Delta)) - C"
+            #print "Delta=%0.3f +/- %0.3f C=%0.3f +/- %0.3f" %(B,errs[0],C,errs[1])
         if args.mutual:
             I = S2A+S2B-S2AB
             FancyErrorbar(ax,np.array(BetaZ),(I*1.0)/float(Lx),\

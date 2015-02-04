@@ -6,7 +6,7 @@ from optparse import OptionParser
 import argparse
 from scipy import integrate
 from pylab import *
-import mplrc
+from mplrc import *
 import numpy as np
 from matplotlib.ticker import MultipleLocator
 from scipy import interpolate
@@ -117,16 +117,16 @@ def main():
     parser.add_argument('--spline',    type=int,            default=0,     help = "Set to > 0 to perform a spline fit")
     args = parser.parse_args() 
 
-    rcParams.update(mplrc.aps['params'])
-    colors = ["#66CAAE", "#CF6BDD", "#E27844", "#7ACF57", "#92A1D6", "#E17597", "#C1B546",'b']
-    figure(1,(7,6))
+    #rcParams.update(mplrc.aps['params'])
+    figure(1)
     connect('key_press_event',kevent.press)
     nplots = args.renyi + args.mutual + args.energy
     iplot  = nplots
     if  args.mutual:
         ax  = subplot(nplots,1,iplot)
         iplot -= 1
-        ax.set_ylabel(r'$\mathrm{I/(L_x)}$')
+        #ax.set_ylabel(r'$\mathrm{S_2^{V}/L^2}$')
+        ax.set_ylabel(r'$\mathrm{I/2L}$')
         ax.set_xlabel(r'$\mathrm{%s}[K^{-1}]$' %parMap['b'])
     if  args.renyi:    
         ax1  = subplot(nplots,1,iplot)
@@ -146,7 +146,7 @@ def main():
 
     order = ['Lx','Ly','T','b']
     
-    Lxs = {}
+    Lxs = OrderedDict() 
     offset = 0
 
     for fileName in args.fileNames:
@@ -309,6 +309,7 @@ def main():
 
             # Otherwise, integrate the energy curve
             nZ, dZ  = Bootstrap(SplineIntegrate,nBeta,nE,ndE,250)
+            #nZ, dZ  = Bootstrap(SimpsonIntegrate,nBeta,nE,ndE,250)
             (nZ,dZ) = (-nZ,dZ)
             Z       = unumpy.uarray(nZ,dZ)
 
@@ -332,10 +333,15 @@ def main():
                     if  args.renyi:
                         S2n = unumpy.nominal_values(S2)#-S2[-1])
                         S2d = unumpy.std_devs(S2)#-S2[-1])
+                        S2 = S2/float(Lx)
                         FancyErrorbar(ax1,nBeta,S2,
                                  color = colors[i%len(colors)],
                                  label = ((r'$\mathrm{Lx=%2.0d}$' %Lx) +'\n'+ (r'$\mathrm{S_{2%s}}$' %geom[0] )))
 
+                        Xs     =  [1.0, 8.0, 16.0, 32.0, 64.0, 92.0, 184.0, 276.0]
+                        Values =  [1.9740730661398347, 0.24715284167716384,  0.23999208451840279, 0.23651867483239924, 0.23417678324726049, 0.23352173383909103, 0.23283450042329776, 0.23253888629283043] 
+                        Errors =  [0.00087882558894103056, 0.00062337445094959212,  0.00055045322184110734, 0.00056953281350390528, 0.00055099206991710416, 0.00057051562240484333, 0.00054357923507853821, 0.00054546096534429842]
+                        ax1.errorbar(Xs,  Values, Errors,  ls = '', marker='s', label=r'$\mathrm{RT}$') 
             j += 1
         #T, MI = loadtxt("MI_ED.dat", unpack=True)
         #ax.plot(1.0/np.array(T), MI/float(Lx),\
@@ -346,11 +352,22 @@ def main():
         # ------------MI plots----------
         if args.mutual:
 
-            I  = (S2A+S2B-S2AB)/float(Lx)
+            I  = (S2A+S2B-S2AB)/float(2*Lx)
+            #FancyErrorbar(ax,nBeta,I,\
+            #              color = colors[(i)%len(colors)],
+            #              label = (r'$\mathrm{r=%0.2d;\, A=%s}$' %(geom[1],Lx)))
             FancyErrorbar(ax,nBeta,I,\
-                          color = colors[(i)%len(colors)],
-                          label = (r'$\mathrm{r=%0.2d;\, A=%s}$' %(geom[1],geom[0])))
-
+                          color = fcolors(i),
+                          label = (r'$\mathrm{L=%s}$' %(Lx)))
+            if int(Lx) == 8:
+                Xs     = [1.0, 8.0, 8.0, 16.0, 32.0, 64.0, 92.0, 184.0, 276.0]
+                Values = [0.14191046360246817, 0.15091158963115461, 0.15112126238220858, 0.16610700708138687, 0.18675273132490625, 0.21428804353951938, 0.22574468063607689, 0.23251280150358983, 0.23217037968425019]
+                Errors = [0.00067064979017330357, 0.00045160533406110939, 0.00040242820416314313, 0.00042028836938222804, 0.00041391318426548966, 0.00039912823563256907, 0.00040790029817156691, 0.00040395552486499571, 0.00039147430743580717]
+            if int(Lx) == 12:
+                Xs     =  np.array([92.0, 184.0, 368.0, 552.0])
+                Values =  [0.17358902184078864, 0.19149847726506958, 0.19797531796757287, 0.19822022209936141]
+                Errors =  [0.0004428599754902722, 0.00043690038294276744, 0.00043835040610511769, 0.00046491312803567029]
+            ax.errorbar(Xs,  Values, Errors,  color = colors[(i)%len(colors)], ls = '', marker='s', label=r'$\mathrm{RT}$') 
             if  args.save:
                 filename = 'reduce-%s_Lx-%02d.dat' %('mutual',Lx)
                 outFile  = open(filename,'w')
@@ -368,7 +385,7 @@ def main():
        ax1.legend(loc='best',frameon=False)
     if args.energy or args.partition:
        ax2.legend(loc='best',frameon=False)
-    tight_layout()
+    #tight_layout()
     show()
 
 # ----------------------------------------------------------------------

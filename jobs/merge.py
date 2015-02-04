@@ -32,7 +32,7 @@ def ReadSkipping(fileName,skip=0):
     numLines = len(inLines)-skip
 
     # check in case we want to skip more lines than there are
-    if numLines > 0:
+    if numLines > 1000:
        for i in range(skip):
            inLines.pop(0)   
     else:
@@ -233,8 +233,8 @@ def main():
     parser.add_option("-r",  dest="r", type="float",
                       help="replicas number") 
     parser.add_option("-v", "--varp", dest="varp",
-                      choices=['T','B','x','y','r','p','a'], 
-                      help="varying parameter, one of [T,B,x,y,r,p,a]") 
+                      choices=['T','b','x','y','r','p','a'], 
+                      help="varying parameter, one of [T,b,x,y,r,p,a]") 
     parser.add_option("--restarted", action="store_true", dest="restarted",
                       help="are we merging an ancestry chain of ssexys that got restarted from a each other?")
     parser.add_option("-s", "--skip", dest="skip", type="int",
@@ -288,7 +288,7 @@ def main():
 
              #if there is only one ssexyId with a varp, the just copy the files
              if (len(mergeSet) == 1):
-                lsCommand = 'ls *log*%s*' %mergeSet[0]
+                lsCommand = 'ls *state*%s*' %mergeSet[0]
                 LogName = os.popen(lsCommand).read().split('\n')[0]
                 shutil.copyfile(LogName,'MERGED/'+LogName) 
                 
