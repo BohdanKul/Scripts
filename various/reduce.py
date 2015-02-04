@@ -137,7 +137,8 @@ def main():
               'b': r'\beta',
               'T': r'T',
               'r': r'r',
-              'a': r'N_A'}
+              'a': r'N_A',
+              'd': r'\Delta'}
 
 
     parser = OptionParser() 
@@ -147,7 +148,7 @@ def main():
                       help="number of particles") 
     parser.add_option("-v", "--reduce", dest="reduce",
                       choices=['r','x','y','T','b','a'], 
-                      help="variable name for reduction [r,x,y,T,b,a]") 
+                      help="variable name for reduction [r,x,y,T,b,a,d]") 
     parser.add_option("-r", "--replica", dest = "r",type="int",
                       help="number of replica copies") 
     parser.add_option("-x", "--Lx", dest="x", type="int",
@@ -161,7 +162,7 @@ def main():
     parser.set_defaults(skip=0)
     (options, args) = parser.parse_args() 
     if (not options.reduce):
-        parser.error("need a correct reduce flag (-r,--reduce): [r,x,y,T,b,a]")
+        parser.error("need a correct reduce flag (-r,--reduce): [r,x,y,T,b,a,d]")
     # parse the command line options and get the reduce flag
 
 
@@ -189,7 +190,7 @@ def main():
             param.append(float(ssexy.params[ID][options.reduce]))
         lab = ''
         options_dic = vars(options)
-        for item in ['x','y','r','T','b']:
+        for item in ['x','y','r','T','b','d']:
             if options_dic[item]:
                lab += r'%s=%s \,' %(parMap[item],options_dic[item])
 

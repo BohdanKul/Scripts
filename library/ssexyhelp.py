@@ -38,9 +38,13 @@ def getParamMap(fname):
               'y'     : int(fileParts[3])}
     if 't' in fileParts[4]: params['T']    = float(fileParts[4][1:])
     else:                   params['b']    = float(fileParts[4][1:])
-    if fileParts[5].isdigit(): params['a'] = int(fileParts[5])
+    k = 5
+    if 'd' in fileParts[5]: 
+        params['d']    = float(fileParts[5][1:])
+        k = 6 
+    if fileParts[k].isdigit(): params['a'] = int(fileParts[k])
     else: 
-        if 'p' in fileParts[5]: params['p'] = int(fileParts[5][1:])
+        if 'p' in fileParts[k]: params['p'] = int(fileParts[k][1:])
     return params 
 
 ##---------------------------------------------------------------------------
