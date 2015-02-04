@@ -17,7 +17,7 @@ def GetPIMCs(fileName):
         #    Mstate = True
         #    continue
         if  Mstate:
-            if  line.find('Legs') != -1:
+            if  line.find('Measurement taken') != -1:
                 pimcid = line[:9]
                 PIMCs.append(pimcid)
                 break

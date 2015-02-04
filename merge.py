@@ -32,7 +32,7 @@ def ReadSkipping(fileName,skip=0):
     numLines = len(inLines)-skip
 
     # check in case we want to skip more lines than there are
-    if numLines > 0:
+    if numLines > 950:
        for i in range(skip):
            inLines.pop(0)   
     else:
@@ -118,6 +118,8 @@ def addFromToSkipping(FromfileName,outFile,skip=0,average=False,waverage=False):
               outFile.write('%16d' %len(data[0:]))    
           if  waverage:
               errs = amax(MCstat.bin(data),axis=0)
+              # check if aves is a scalar
+              if not hasattr(aves, "__len__"): aves = np.array([aves]) 
               for (ave,err) in zip(aves,errs):
                   outFile.write('%16.8E%16.8E' %(ave,err))
              
@@ -148,7 +150,6 @@ def mergeData(ssexy,type,newID,skip=0,isRestarted=False,ssexyIds=None,average=Fa
         if len(glob.glob(fname)) > 0:
            #if we havent yet an output file, create one
            if not fileExist:
-               print fname
                outFile,numLines = CreateFileSkipping(fname,ssexyIds[0],newID,skip,average,waverage)
                fileExist = (outFile != '') 
                #taken it is a restarted job, if there is less measurements than we want to skip in 
@@ -224,7 +225,7 @@ def main():
     parser = OptionParser() 
     parser.add_option("-T", "--temperature", dest="T", type="float",
                       help="simulation temperature in Kelvin") 
-    parser.add_option("-b", "--beta", dest="B", type="float",
+    parser.add_option("-b", "--beta", dest="b", type="float",
                       help="simulation temperature in inverse Kelvin") 
     parser.add_option("-x",  dest="x", type="float",
                       help="x length") 
@@ -233,8 +234,8 @@ def main():
     parser.add_option("-r",  dest="r", type="float",
                       help="replicas number") 
     parser.add_option("-v", "--varp", dest="varp",
-                      choices=['T','B','x','y','r','p','a'], 
-                      help="varying parameter, one of [T,B,x,y,r,p,a]") 
+                      choices=['T','b','x','y','r','p','a'], 
+                      help="varying parameter, one of [T,b,x,y,r,p,a]") 
     parser.add_option("--restarted", action="store_true", dest="restarted",
                       help="are we merging an ancestry chain of ssexys that got restarted from a each other?")
     parser.add_option("-s", "--skip", dest="skip", type="int",
@@ -288,7 +289,7 @@ def main():
 
              #if there is only one ssexyId with a varp, the just copy the files
              if (len(mergeSet) == 1):
-                lsCommand = 'ls *log*%s*' %mergeSet[0]
+                lsCommand = 'ls *state*%s*' %mergeSet[0]
                 LogName = os.popen(lsCommand).read().split('\n')[0]
                 shutil.copyfile(LogName,'MERGED/'+LogName) 
                 

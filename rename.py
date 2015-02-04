@@ -26,27 +26,14 @@ def main():
         dic = {}
         for fileName in args.fileNames:
 
-            fileParts = fileName.split('estimator')
-
+            print fileName
             # Now break up the data name into descriptive parts
-            dataName = fileParts[-1]
-            dataName = dataName.rstrip('.dat')
-            dataParts = dataName.split('-')
-	    oldID = int(dataParts[-1])
-            dataParts.pop(-2)
-            ndataName = '-'.join(dataParts) + '.dat'
-            if args.rename:
-
-                dataName = ''
-                for lab in dataParts[:-1]:
-                        dataName += lab + '-'
-                print ndataName
-                for type in fileType:
-                        oldName = fileParts[0] + type + fileParts[-1]
-                        newName = fileParts[0] + type + ndataName
-                        os.popen('mv %s %s' % (oldName,newName))
-                print 'Rename to: ', newName
-                         
+            dataFile  = open(fileName,'r');
+            dataLines = dataFile.readlines()[:500];
+            dataFile.close()
+            dataFile  = open(fileName,'w');
+            dataFile.writelines(dataLines)
+                        
 
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------

@@ -99,7 +99,7 @@ def sharcnet(commandLines,run):
     for n in range(numOptions):
         name = '''out/run-%s-%%J''' % run
         #scriptFile.write('sleep %d\nsqsub -q NRAP_893 -o %s --mpp=2G -r 1h %s\n' % (2,name,commandLines[n]))
-        scriptFile.write('sqsub -q NRAP_893 -o %s --mpp=2G -r 3d %s\n' % (name,commandLines[n]))
+        scriptFile.write('sqsub -q NRAP_893 -o %s --mpp=1G -r 7d %s\n' % (name,commandLines[n]))
 
     scriptFile.close();
     os.system('chmod u+x %s'%fileName)

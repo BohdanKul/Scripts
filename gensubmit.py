@@ -88,7 +88,7 @@ def main():
            print (flag,n)        
 	   if n != num:
                 print flag, ' ', n
-		print 'Not all parameters have the same number of values!'
+		print 'Not all parameters have the same number of values!', num
                 sys.exit()
                 
     commandLines = []
@@ -103,7 +103,7 @@ def main():
 
     ncommandLines = []
     if  args.batch!=None:
-        for j in range(args.batch):
+        for j in range(17,17+args.batch):
             for commandLine in commandLines:
                 ncommandLines.append(commandLine + ' -p %d ' %j)
         commandLines=ncommandLines

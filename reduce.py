@@ -68,6 +68,8 @@ def getScalarEst(type,ssexy,outName,reduceFlag, skip=0):
     ave = zeros([len(fileNames),small],float)
     err = zeros([len(fileNames),small],float)
     for i,fname in enumerate(fileNames):
+        print fname
+        print headers
         # Compute the averages and error
         waverage = False
         headers   = ssexyhelp.getHeadersFromFile(fname)
@@ -75,7 +77,10 @@ def getScalarEst(type,ssexy,outName,reduceFlag, skip=0):
         #    headers.pop(3)
         #    data = loadtxt(fname,ndmin=2,usecols=(0,1,2,4,5,6,7))[skip:,:]
         #else:
-        data = loadtxt(fname,ndmin=2)[skip:,:]
+        data = loadtxt(fname,ndmin=2)
+        data = data[skip:,:]
+        if 'Bins' in headers:
+            headers = headers[:-1]
         if 'dnT' in headers:
             headers = headers[::2]
         if '+/-' in headers:
@@ -87,8 +92,6 @@ def getScalarEst(type,ssexy,outName,reduceFlag, skip=0):
         #    data = np.delete(data,3,axis=1)
         if oldFormat:
             data = data[:,::2]
-        print fname
-        print headers
         ave[i,:],err[i,:] = getStats(data,lAveraged[i],waverage)
     
     # output the estimator data to disk
@@ -131,7 +134,7 @@ def main():
     # define the mapping between short names and label names 
     parMap = {'x': r'L_x',
               'y': r'L_y',
-              'B': r'\beta',
+              'b': r'\beta',
               'T': r'T',
               'r': r'r',
               'a': r'N_A'}
@@ -140,7 +143,7 @@ def main():
     parser = OptionParser() 
     parser.add_option("-T", "--temperature", dest="T", type="float",
                       help="simulation temperature in Kelvin") 
-    parser.add_option("-b", "--beta", dest="B", type="float",
+    parser.add_option("-b", "--beta", dest="b", type="float",
                       help="number of particles") 
     parser.add_option("-v", "--reduce", dest="reduce",
                       choices=['r','x','y','T','b','a'], 
@@ -186,7 +189,7 @@ def main():
             param.append(float(ssexy.params[ID][options.reduce]))
         lab = ''
         options_dic = vars(options)
-        for item in ['x','y','r','T','B']:
+        for item in ['x','y','r','T','b']:
             if options_dic[item]:
                lab += r'%s=%s \,' %(parMap[item],options_dic[item])
 

@@ -32,7 +32,7 @@ def main():
             dataName = fileParts[-1]
             dataName = dataName.rstrip('.dat')
             dataParts = dataName.split('-')
-	    oldID = int(dataParts[-1])
+            oldID = int(dataParts[-1])
             if  not(oldID in dic):
                 dic[oldID] = fileName
             else:

@@ -32,12 +32,15 @@ def getParamMap(fname):
     for n in pIndex:
         fileParts.pop(n)
 
+    
     params = {'r': int(fileParts[1]),
               'x'     : int(fileParts[2]),       
               'y'     : int(fileParts[3])}
     if 't' in fileParts[4]: params['T']    = float(fileParts[4][1:])
     else:                   params['b']    = float(fileParts[4][1:])
-    if int(fileParts[5]) < 10000: params['a'] = int(fileParts[5])
+    if fileParts[5].isdigit(): params['a'] = int(fileParts[5])
+    else: 
+        if 'p' in fileParts[5]: params['p'] = int(fileParts[5][1:])
     return params 
 
 ##---------------------------------------------------------------------------
@@ -66,7 +69,7 @@ def getWildCardString(options):
         be used to open all data files. '''
 
     out = ''
-    if options.B is not None: flagB = "%06.3f" % options.B; out += '_b-'+flagB
+    if options.b is not None: flagB = "%06.3f" % options.b; out += '_b-'+flagB
     else:                     flagB = "*"
 
     if options.T is not None: flagT = "%06.3f" % options.T; out += '_T-'+flagT
@@ -82,7 +85,7 @@ def getWildCardString(options):
     else:                     flagr = "*"
 
     if    options.T: dataName = '%s-%s-%s-t%s-*.dat' % (flagr,flagx,flagy,flagT)
-    elif  options.B: dataName = '%s-%s-%s-b%s-*.dat' % (flagr,flagx,flagy,flagB)
+    elif  options.b: dataName = '%s-%s-%s-b%s-*.dat' % (flagr,flagx,flagy,flagB)
     else:            dataName = '%s-%s-%s-%s-*.dat'  % (flagr,flagx,flagy,"*")
 
     return dataName, out
