@@ -87,11 +87,17 @@ def getWildCardString(options):
     
     if options.r is not None: flagr = "%02d" % options.r;   out += '_r-'+flagr
     else:                     flagr = "*"
+    
+    if options.d is not None: flagd = "%06.3f" % options.d;   out += '_delta-'+flagd
+    else:                     flagd = "*"
 
-    if    options.T: dataName = '%s-%s-%s-t%s-*.dat' % (flagr,flagx,flagy,flagT)
-    elif  options.b: dataName = '%s-%s-%s-b%s-*.dat' % (flagr,flagx,flagy,flagB)
-    else:            dataName = '%s-%s-%s-%s-*.dat'  % (flagr,flagx,flagy,"*")
+    if    options.T: dataName = '%s-%s-%s-t%s' % (flagr,flagx,flagy,flagT)
+    elif  options.b: dataName = '%s-%s-%s-b%s' % (flagr,flagx,flagy,flagB)
+    else:            dataName = '%s-%s-%s-%s'  % (flagr,flagx,flagy,"*")
 
+    if    options.d: dataName += '-d%s' % (flagd)
+
+    dataName += '*.dat'
     return dataName, out
 
 

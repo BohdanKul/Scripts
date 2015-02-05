@@ -23,7 +23,7 @@ def getPIMCommand(fname):
     for par,value in params.iteritems():
         if isinstance(value,int): command += "-%s %d "    %(par,value)
         else:                     command += "-%s %0.3f " %(par,value)
-    command += "-%s %d " %('t',params['a']+16)
+    command += "-%s %d " %('t',params['a']+8)
     return command
 
 # -----------------------------------------------------------------------------
@@ -37,6 +37,8 @@ def main():
                       help="simulation temperature in Kelvin") 
     parser.add_option("-b", "--beta", dest="b", type="float",
                       help="number of particles") 
+    parser.add_option("-d", "--delta", dest="d", type="float",
+                      help="strength of SzSz interaction") 
     parser.add_option("-r", "--replica", dest = "r",type="int",
                       help="number of replica copies") 
     parser.add_option("-x", "--Lx", dest="x", type="int",
@@ -78,7 +80,6 @@ def main():
     
     estFileNames  = ssexy.getFileList('estimator',idList=ssexy.id) 
 
-
     # If we have excluded any ID's we remove them from the list
     if options.exID:
         for id in options.exID:
@@ -91,29 +92,17 @@ def main():
     i = 0
     N = 0
     nN= 0
-    #As = {}
-    #for estFile in estFileNames:
-    #    A = estFile.split('-')[-2]
-    #    fsize = len(open(estFile,'r').readlines())
-    #    if fsize > 1000: 
-    #        if  A in As.keys(): As[A] += 1
-    #        else:               As[A]  = 1
 
     #print As
     for estFile in estFileNames:   
-        #estFile   = 'estimator'+stateFile[5:]
         stateFile =  'state'+estFile[9:]
-        fsize = len(open(estFile,'r').readlines())
-        #A = estFile.split('-')[-2]
+        #fsize = len(open(estFile,'r').readlines())
         #if os.path.getsize(stateFile) != 0: 
-        #if  (As[A] < 15) and (fsize < 1000):
-        if (fsize < 1400):
-            #As[A] += 1
-            PIMCommand = getPIMCommand(stateFile)
-            PIMCommand += '-m %d ' %(1400 - fsize)
-            PIMCommand += '-s %s/%s' %(options.folder,stateFile)
-            print PIMCommand
-            SubmitData.append(PIMCommand)
+        PIMCommand = getPIMCommand(estFile)
+        PIMCommand += '-m %d ' %(45000)
+        PIMCommand += '-s %s/%s' %(options.folder,stateFile)
+        print PIMCommand
+        SubmitData.append(PIMCommand)
 
     #switch back to folder we used to be 
     os.chdir(CurrentFolder)

@@ -151,6 +151,8 @@ def main():
                       help="variable name for reduction [r,x,y,T,b,a,d]") 
     parser.add_option("-r", "--replica", dest = "r",type="int",
                       help="number of replica copies") 
+    parser.add_option("-d", "--delta", dest="d", type="float",
+                      help="SzSz interaction") 
     parser.add_option("-x", "--Lx", dest="x", type="int",
                       help="lattice width") 
     parser.add_option("-y", "--Ly", dest="y", type="int",
