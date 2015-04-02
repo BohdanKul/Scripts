@@ -32,7 +32,7 @@ def ReadSkipping(fileName,skip=0):
     numLines = len(inLines)-skip
 
     # check in case we want to skip more lines than there are
-    if numLines > 950:
+    if numLines > 3950:
        for i in range(skip):
            inLines.pop(0)   
     else:
@@ -225,6 +225,8 @@ def main():
     parser = OptionParser() 
     parser.add_option("-T", "--temperature", dest="T", type="float",
                       help="simulation temperature in Kelvin") 
+    parser.add_option("-d", "--delta", dest="d", type="float",
+                      help="delta") 
     parser.add_option("-b", "--beta", dest="b", type="float",
                       help="simulation temperature in inverse Kelvin") 
     parser.add_option("-x",  dest="x", type="float",

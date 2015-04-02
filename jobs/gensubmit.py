@@ -103,7 +103,7 @@ def main():
 
     ncommandLines = []
     if  args.batch!=None:
-        for j in range(17,17+args.batch):
+        for j in range(100,100+args.batch):
             for commandLine in commandLines:
                 ncommandLines.append(commandLine + ' -p %d ' %j)
         commandLines=ncommandLines
