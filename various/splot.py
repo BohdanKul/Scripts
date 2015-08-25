@@ -148,7 +148,7 @@ def main():
         headers = ffile.readline().lstrip('#').split()
         headers += ['srt']
         if len(dataLines) > 2:
-            params = GetFileParams(fileName)
+            #params = GetFileParams(fileName)
             if  srt and not('ALRatio' in headers):
                 col    = GetHeaderNumber(fileName,'nAred')
                 dataR = loadtxt(fileName,usecols=col)
@@ -172,7 +172,7 @@ def main():
                 ID = fileName[-14:-4]
                 if  size(data) > 1:
                     sma = simpleMovingAverage(args.period,data[args.skip:])
-                    ax.plot(sma,color=colors[i%len(colors)],linewidth=3,linestyle='-',label=r'$T = %s$' %params['T'])
+                    ax.plot(sma,color=colors[i%len(colors)],linewidth=3,linestyle='-')
                     bins = MCstat.bin(data[args.skip:]) 
                     dataErr = amax(bins,axis=0)
                     dataAve = average(data[args.skip:])
@@ -183,7 +183,7 @@ def main():
                         dEs += [S2.s]
                     #ax.plot(bins,color=colors[i%len(colors)],linewidth=1,marker='None',linestyle='-')
                     #if E0 == 0: E0 = dataAve
-                    print 'T= %s %0.6f +/- %0.6f ' %(params['T'],dataAve-E0,dataErr)
+                    print '%0.6f +/- %0.6f ' %(dataAve-E0,dataErr)
                     #print dataAve-E0
         else:
             print '%s contains no measurements' %fileName
@@ -192,7 +192,7 @@ def main():
     #tight_layout()
     print Es
     print dEs
-    legend() 
+    #legend() 
     show()
 
 # ----------------------------------------------------------------------
