@@ -15,9 +15,9 @@ from pylab import *
 #connect('key_press_event',kevent.press)
 #colors = ["#66CAAE", "#CF6BDD", "#E27844", "#7ACF57", "#92A1D6", "#E17597", "#C1B546"]
 
-N     = 4    # Number of spins in a chain
-J     = 1.0
-delta = 1.0
+N     = 3    # Number of spins in a chain
+J     = 2.0
+delta = 0.5
 
 I  = qeye(2)
 #P = tensor(projection(2,0,0), tensor([I]*(N-Nv)))
@@ -25,7 +25,7 @@ ket = tensor(basis(2,1), basis(2,0))
 P2 =  ket*ket.dag()
 
 
-clamped = []
+clamped = [0,0,0]
 if  len(clamped)>0:
     ket = basis(2,clamped[0])
     for qbit in clamped[1:]:
@@ -41,11 +41,11 @@ else:
 
 PBC = True 
 #PBC = False 
-for j,beta in enumerate([1.0]):
+for j,beta in enumerate([2.0]):
     Es     = []
     hs = []
     #for h in np.linspace(0,1,10):
-    for h in [1.0]:
+    for h in [1.5]:
         ZZbond = 1.0*J*tensor(sigmaz(),sigmaz())
         dBond  = 1.0*delta*sigmax()
         hBond  = 1.0*h*sigmaz()
@@ -91,11 +91,11 @@ for j,beta in enumerate([1.0]):
             else:
                 H += tensor(sigmaz(),J*sigmaz()) 
         
+        print P 
         rho  = (-H*beta).expm()
         rho *= P
         Z    = rho.tr()
         rho /= Z
-        
         E = 0
         E = (rho*H).tr()/float(N)
         
@@ -195,35 +195,35 @@ for j,beta in enumerate([1.0]):
 
         print
 
-        #print "  sigma_z x sigma_z: ",
-        #for i in range(N-1+int(PBC)):
-        #    if N==2: oper = tensor(sigmaz(), sigmaz())
-        #    else:  
-        #        if i < N-1:
-        #            if   i==0:      oper = tensor(sigmaz(),                sigmaz(), tensor([qeye(2)]*(N-2)))
-        #            elif i==(N-2):  oper = tensor(tensor([qeye(2)]*(N-2)), sigmaz(), sigmaz())
-        #            else:           oper = tensor(tensor([qeye(2)]*i),     sigmaz(), sigmaz(), tensor([qeye(2)]*(N-i-2)))
-        #        else:        
-        #           oper = tensor(sigmaz(), tensor([qeye(2)]*(N-2)), sigmaz())
-        #
-        #    Nsamples = 100
-        #    xs = []
-        #    ys = []
-        #    for step in range(Nsamples+1):
-        #        tau = 1.0*step*beta/(1.0*Nsamples)
-        #        xs  += [tau]
-        #        Ub   = ( H*tau).expm()
-        #        Uf   = (-H*tau).expm()
-        #        rho  = (-H*beta).expm()
-        #        rho *= P
-        #        Z    = rho.tr()
-        #        rho /= Z
-        #        ys  += [(Uf*oper*Ub*rho).tr()]
-        #    O = simps(np.array(ys), np.array(xs))
-        #    
-        #    #plot(real(xs), real(ys))
-        #    if i<N-1: print  '%d-%d = %+0.7f' %(i  , i+1, real(O)),
-        #    else:     print  '%d-0 = %+0.7f'  %(N-1, real(O)),
+        print "  sigma_z x sigma_z: ",
+        for i in range(N-1+int(PBC)):
+            if N==2: oper = tensor(sigmaz(), sigmaz())
+            else:  
+                if i < N-1:
+                    if   i==0:      oper = tensor(sigmaz(),                sigmaz(), tensor([qeye(2)]*(N-2)))
+                    elif i==(N-2):  oper = tensor(tensor([qeye(2)]*(N-2)), sigmaz(), sigmaz())
+                    else:           oper = tensor(tensor([qeye(2)]*i),     sigmaz(), sigmaz(), tensor([qeye(2)]*(N-i-2)))
+                else:        
+                   oper = tensor(sigmaz(), tensor([qeye(2)]*(N-2)), sigmaz())
+        
+            Nsamples = 100
+            xs = []
+            ys = []
+            for step in range(Nsamples+1):
+                tau = 1.0*step*beta/(1.0*Nsamples)
+                xs  += [tau]
+                Ub   = ( H*tau).expm()
+                Uf   = (-H*tau).expm()
+                rho  = (-H*beta).expm()
+                rho *= P
+                Z    = rho.tr()
+                rho /= Z
+                ys  += [(Uf*oper*Ub*rho).tr()]
+            O = simps(np.array(ys), np.array(xs))
+            
+            #plot(real(xs), real(ys))
+            if i<N-1: print  '%d-%d = %+0.7f' %(i  , i+1, real(O)),
+            else:     print  '%d-0 = %+0.7f'  %(N-1, real(O)),
 
         #print
         print

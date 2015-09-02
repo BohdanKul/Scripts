@@ -26,7 +26,7 @@ def Embed2SiteOper(site_oper, strength, siteA, siteB, N):
        siteA, siteB = siteB, siteA
     
     operA = site_oper
-    operB = site_oper*strength
+    operB = site_oper
     
     pre  = EmbedSiteOper(operA, 1.0, siteA, siteA+1)
     suff = EmbedSiteOper(operB, strength, siteB-siteA-1, N-siteA-1)
@@ -43,49 +43,45 @@ def LoadInters(fname):
     data = np.loadtxt(fname, skiprows=2)
     Zfield = data[:nSz,2]
     Xfield = data[nSz:nSz+nSx, 2]
-    Inter  = data[nSz+nSx:, :]
+    bonds  = data[nSz+nSx:, 0:1]
+    Inter  = data[nSz+nSx:, 2]
     
-    return Zfield, Xfield, Inter
+    return Zfield, Xfield, Inter, bonds
 
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 def OBC_Line(N, strength):
-    inter = np.zeros((N-1, 3))
+    inter = np.ones(N-1)*strength
 
+    bonds = []
     for i in range(N-1):
-        inter[i] = [i, i+1, strength]
-    
-    return inter
+        bonds   += [[i, i+1]] 
+    return bonds, inter 
 
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 def PBC_Line(N, strength):
-    inter = np.zeros((N, 3))
-    inter[:N-1, :] = OBC_Line(N, strength)
-    inter[N-1] = [N-1, 0, strength]
+    bonds, inter = OBC_Line(N, strength)
+    bonds += [[N-1, 0]]
+    inter = np.append(inter, strength)
 
-    return inter
+    return bonds, inter
 
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 def OBC_Rect(x, y, strength):
     if y==1: return OBC_Line(x, strength)
 
-    inter = np.zeros( ((x-1)*(y-1)*2+x-1+y-1, 3) )
-    i = 0
+    inter = np.ones((x-1)*(y-1)*2+x-1+y-1)*strength
+    bonds = []
     for Y in range(y):
         for X in range(x):
             if (X!=x-1) and (Y!=y-1):
-                inter[i] = [x*Y+X, x*Y+X+1,   strength]
-                inter[i+1] = [x*Y+X, x*(Y+1)+X, strength]
-                i += 2
-            elif (X==x-1) and (Y!=y-1):
-                inter[i] = [x*Y+X, x*(Y+1)+X, strength]
-                i += 1
-            elif (X!=x-1) and (Y==y-1):
-                inter[i] = [x*Y+X, x*Y+X+1,   strength]
-                i += 1
-    return inter
+                bonds += [[x*Y+X, x*Y+X+1]]
+                bonds += [[x*Y+X, x*(Y+1)+X]]
+            elif (X==x-1) and (Y!=y-1): bonds += [[x*Y+X, x*(Y+1)+X]]
+            elif (X!=x-1) and (Y==y-1): bonds += [[x*Y+X, x*Y+X+1]]
+    return bonds, inter
 
 
 # ----------------------------------------------------------------------
@@ -93,23 +89,21 @@ def OBC_Rect(x, y, strength):
 def PBC_Rect(x, y, strength):
     if y==1: return PBC_Line(x, strength)
 
-    inter = np.zeros( (x*y*2, 3) ) 
+    inter = np.ones(x*y*2) * strength
     
     # bulk connections
-    i = (x-1)*(y-1)*2+x-1+y-1
-    inter[: i, : ] = OBC_Rect(x, y, strength)
-    
+    #i = (x-1)*(y-1)*2+x-1+y-1
+    bonds, t = OBC_Rect(x, y, strength)
+
     # vertical PBC
     for X in range(x):
-        inter[i] = [x*(y-1)+X, X,   strength]
-        i += 1
+        bonds += [[x*(y-1)+X, X]]
     
     # horizontal PBC
     for Y in range(y):
-        inter[i] = [x*(Y+1)-1, x*Y,   strength]
-        i += 1
+        bonds += [[x*(Y+1)-1, x*Y]]
     
-    return inter
+    return bonds, inter
 
 
 

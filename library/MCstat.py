@@ -1,7 +1,5 @@
 #!/usr/bin/python
 # pimcstat.py
-# Chris Herdman
-# 11.30.2012
 # 
 # Statistical analysis library for Monte Carlo Data
 import math as m
