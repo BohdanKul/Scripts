@@ -15,9 +15,9 @@ from pylab import *
 #connect('key_press_event',kevent.press)
 #colors = ["#66CAAE", "#CF6BDD", "#E27844", "#7ACF57", "#92A1D6", "#E17597", "#C1B546"]
 
-N     = 3    # Number of spins in a chain
-J     = 2.0
-delta = 0.5
+N     = 2   # Number of spins in a chain
+J     = 1.9514
+delta = 0.0
 
 I  = qeye(2)
 #P = tensor(projection(2,0,0), tensor([I]*(N-Nv)))
@@ -25,7 +25,7 @@ ket = tensor(basis(2,1), basis(2,0))
 P2 =  ket*ket.dag()
 
 
-clamped = [0,0,0]
+clamped = []
 if  len(clamped)>0:
     ket = basis(2,clamped[0])
     for qbit in clamped[1:]:
@@ -40,12 +40,12 @@ else:
 
 
 PBC = True 
-#PBC = False 
-for j,beta in enumerate([2.0]):
+PBC = False 
+for j,beta in enumerate([5.0]):
     Es     = []
     hs = []
     #for h in np.linspace(0,1,10):
-    for h in [1.5]:
+    for h in [0.1639]:
         ZZbond = 1.0*J*tensor(sigmaz(),sigmaz())
         dBond  = 1.0*delta*sigmax()
         hBond  = 1.0*h*sigmaz()
@@ -176,7 +176,7 @@ for j,beta in enumerate([2.0]):
             elif i==(N-1): oper = tensor(tensor([qeye(2)]*(N-1)), sigmaz())
             else:          oper = tensor(tensor([qeye(2)]*i), sigmaz(), tensor([qeye(2)]*(N-1-i)))
         
-            Nsamples = 100
+            Nsamples = 20
             xs = []
             ys = []
             for step in range(Nsamples+1):

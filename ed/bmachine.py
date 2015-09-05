@@ -2,6 +2,7 @@ from qutip    import *
 from Hbuilder import *
 
 from scipy.integrate import simps
+from scipy.integrate import trapz 
 import numpy as np
 from pylab import real 
 
@@ -42,7 +43,6 @@ class BoltzmannMachine:
         if (len(cbits)>0) and (len(cbits)!=self.N): self.P = tensor(self.P, tensor([qeye(2)]*(self.N-len(cbits))))
         elif (len(cbits)==0):                       self.P = tensor(tensor([qeye(2)]*self.N))
 
-
     def evaluateProjector(self):
         return (self.rho*self.P).tr()/self.rho.tr()
     
@@ -68,39 +68,42 @@ class BoltzmannMachine:
             
             return aveZ, aveX, aveZZ
         else:
-            Nsamples = 100
-            eZ  = [np.zeros(Nsamples+1)]*self.N
-            eX  = [np.zeros(Nsamples+1)]*self.N
-            eZZ = [np.zeros(Nsamples+1)]*len(self.bonds)
-            xs = []
+            Nsamples = 18
+            eZ  = np.zeros((Nsamples+1,self.N))
+            eX  = np.zeros((Nsamples+1,self.N)) 
+            eZZ = np.zeros((Nsamples+1,len(self.bonds)))
+            xs =  np.zeros(Nsamples+1)
             # Evaluate time-evolved operators on a discrete grid
             for step in range(Nsamples+1):
                 tau = 1.0*step*self.beta/(1.0*Nsamples)
-                xs  += [tau]
+                xs[step] = tau
                 Ub   = ( self.H*tau).expm()
                 Uf   = (-self.H*tau).expm()
-                
+               
                 for site in range(self.N):
                     oper = EmbedSiteOper(sigmaz(), 1.0, site, self.N) 
-                    eZ[site][step] = real((Uf*oper*Ub*rho).tr())
+                    #print ' (site,step) = (', site,',', step, ') value =', eZ[site][step], ' new = ', real((oper*rho).tr())
+                    eZ[step][site] = real((oper*rho).tr())
                 
                 for site in range(self.N):
-                    oper = EmbedSiteOper(sigmax(), 1.0, site, self.N) 
-                    eX[site][step] = real((Uf*oper*Ub*rho).tr())
+                    oper = EmbedSiteOper(sigmax(), 1.0, site, self.N)
+                    eX[step][site] = real((Uf*oper*Ub*rho).tr())
                 
                 for i,bond in enumerate(self.bonds):
                     (siteA, siteB) = (bond[0], bond[1])
                     oper = Embed2SiteOper(sigmaz(), 1.0, siteA, siteB, self.N)
-                    eZZ[i][step] = real((Uf*oper*Ub*rho).tr())
-            
+                    eZZ[step][i] = real((Uf*oper*Ub*rho).tr())
             # Numerically integrate 
             (UaveZ, UaveX, UaveZZ) = ([], [], [])
+            #print eZ 
             for site in range(self.N):
-                UaveZ += [simps(eZ[site], np.array(xs))]
-                UaveX += [simps(eX[site], np.array(xs))]
+                UaveZ += [trapz(eZ[:,site], xs)]
+                UaveX += [trapz(eX[:,site], xs)]
+                #UaveZ += [simps(eZ[:,site], xs)]
+                #UaveX += [simps(eX[:,site], xs)]
             
             for bond in range(len(self.bonds)):
-                UaveZZ += [simps(eZZ[bond], np.array(xs))]
+                UaveZZ += [simps(eZZ[:,bond], xs)]
            
             return UaveZ, UaveX, UaveZZ
         
