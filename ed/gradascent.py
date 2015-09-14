@@ -8,6 +8,7 @@ import random as rm
 from pylab import *
 import argparse
 import numpy as np
+import time
 
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
@@ -73,6 +74,7 @@ def main():
     #print Z
     #print ZZ
     
+    t0 = time.time()
     print '---------Data acquisition----------'
     # Load or generate training set -------------------------------------------
     Nclamped = N 
@@ -112,6 +114,7 @@ def main():
     data = [[1, 0], [1,0], [1,0], [1,0], [0,1], [0,1], [0,1]]
     Ndata = 7
     print 'Data: ', data
+    print 'Time: ', time.time() - t0
     print 
     print '---------Gradient ascent----------'
     # Gradient descent --------------------------------------------------------
@@ -149,25 +152,30 @@ def main():
         Zavers  = np.zeros((Ndata+1, N))
         Xavers  = np.zeros((Ndata+1, N))
         ZZavers = np.zeros((Ndata+1, Nbonds))
+        t0 = time.time()
         BM = BoltzmannMachine(N, bonds, gdZ, gdX, gdZZ, beta)
+        #print ' Initialize BM time: ', time.time() - t0
         
         # Compute the log-likelihood
         LL = 0
+        t0 = time.time()
         for cbits in data:
             BM.setProjector(cbits)
             LL -= np.log(real(BM.evaluateProjector()))/(1.0 * Ndata)
         print '   LL = %0.4f vs generating H LL = %0.4f' %(LL, gLL)
+        #print ' Compute LL time: ', time.time() - t0
         
         # Accumulate averages
+        t0 = time.time()
         for i, cbits in enumerate(data):
             BM.setProjector(cbits)
             Zavers[i, :], Xavers[i,:], ZZavers[i,:] = BM.computeLocalAverages()
             #print ' a: ', Zavers[i, :], Xavers[i,:], ZZavers[i,:]
             #Zavers[i, :], ZZavers[i, :] = -1.0*(np.array(cbits)*2-1)*beta, (cbits[0]*2-1)*(cbits[1]*2-1)*beta
-        BM.setProjector([])
+        #print ' Compute estimators time: ', time.time() - t0
+        BM.setProjector([]) 
         Zavers[Ndata,:], Xavers[Ndata,:], ZZavers[Ndata,:] = BM.computeLocalAverages()
-        #print ' b: ', Zavers[Ndata,:], Xavers[Ndata,:], ZZavers[Ndata,:]
-
+        #print ' b: ', Zavers[Ndata,:], Xavers[Ndata,:], ZZavers[Ndata,:] 
         #print Zavers[:Ndata]
         #print Zavers[Ndata]
         #print Zavers[:Ndata] - Zavers[Ndata]
