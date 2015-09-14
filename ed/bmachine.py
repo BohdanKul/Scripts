@@ -68,7 +68,7 @@ class BoltzmannMachine:
             
             return aveZ, aveX, aveZZ
         else:
-            Nsamples = 18
+            Nsamples = 16
             eZ  = np.zeros((Nsamples+1,self.N))
             eX  = np.zeros((Nsamples+1,self.N)) 
             eZZ = np.zeros((Nsamples+1,len(self.bonds)))
@@ -83,7 +83,8 @@ class BoltzmannMachine:
                 for site in range(self.N):
                     oper = EmbedSiteOper(sigmaz(), 1.0, site, self.N) 
                     #print ' (site,step) = (', site,',', step, ') value =', eZ[site][step], ' new = ', real((oper*rho).tr())
-                    eZ[step][site] = real((oper*rho).tr())
+                    #eZ[step][site] = real((oper*rho).tr())
+                    eZ[step][site] = real((Uf*oper*Ub*rho).tr())
                 
                 for site in range(self.N):
                     oper = EmbedSiteOper(sigmax(), 1.0, site, self.N)
@@ -92,10 +93,12 @@ class BoltzmannMachine:
                 for i,bond in enumerate(self.bonds):
                     (siteA, siteB) = (bond[0], bond[1])
                     oper = Embed2SiteOper(sigmaz(), 1.0, siteA, siteB, self.N)
+                    #print 'bond ', i, ' oper ', oper
                     eZZ[step][i] = real((Uf*oper*Ub*rho).tr())
             # Numerically integrate 
             (UaveZ, UaveX, UaveZZ) = ([], [], [])
-            #print eZ 
+            #print eZ[:,0] 
+            
             for site in range(self.N):
                 UaveZ += [trapz(eZ[:,site], xs)]
                 UaveX += [trapz(eX[:,site], xs)]
@@ -103,7 +106,7 @@ class BoltzmannMachine:
                 #UaveX += [simps(eX[:,site], xs)]
             
             for bond in range(len(self.bonds)):
-                UaveZZ += [simps(eZZ[:,bond], xs)]
+                UaveZZ += [trapz(eZZ[:,bond], xs)]
            
             return UaveZ, UaveX, UaveZZ
         

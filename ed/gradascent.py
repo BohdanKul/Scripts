@@ -162,9 +162,11 @@ def main():
         for i, cbits in enumerate(data):
             BM.setProjector(cbits)
             Zavers[i, :], Xavers[i,:], ZZavers[i,:] = BM.computeLocalAverages()
+            #print ' a: ', Zavers[i, :], Xavers[i,:], ZZavers[i,:]
             #Zavers[i, :], ZZavers[i, :] = -1.0*(np.array(cbits)*2-1)*beta, (cbits[0]*2-1)*(cbits[1]*2-1)*beta
         BM.setProjector([])
         Zavers[Ndata,:], Xavers[Ndata,:], ZZavers[Ndata,:] = BM.computeLocalAverages()
+        #print ' b: ', Zavers[Ndata,:], Xavers[Ndata,:], ZZavers[Ndata,:]
 
         #print Zavers[:Ndata]
         #print Zavers[Ndata]
