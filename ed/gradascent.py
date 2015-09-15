@@ -9,7 +9,7 @@ from pylab import *
 import argparse
 import numpy as np
 import time
-
+import collections
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
 def bitfield(n):
@@ -109,6 +109,21 @@ def main():
 
     data = [[1, 0], [1,0], [1,0], [1,0], [0,1], [0,1], [0,1]]
     Ndata = 7
+    
+    
+    # find unique states and count them
+    udata = []
+    cdata = collections.OrderedDict
+    for i,d in enumerate(data):
+        if not(d in udata): 
+           udata += d
+           cdata[d]  = 1
+        else:
+           cdata[d] += 1 
+    weights = np.array(cdata.items())/float(Ndata)
+    data    = udata
+
+    print weights, data
 
     print '---------Gradient ascent----------'
     # Gradient descent --------------------------------------------------------
@@ -187,10 +202,10 @@ def main():
         
         
         # Compute derivatives and the norm
-        dZ   = np.sum((Zavers[:Ndata]  - beta*Zavers[Ndata]),  axis=0)/(1.0*Ndata) 
-        dX   = np.sum((Xavers[:Ndata]  - beta*Xavers[Ndata]),  axis=0)/(1.0*Ndata) 
+        dZ   = np.sum((Zavers[:Ndata]*weights  - beta*Zavers[Ndata]),  axis=0)
+        dX   = np.sum((Xavers[:Ndata]*weights  - beta*Xavers[Ndata]),  axis=0)
         #dX   = np.zeros_like(Xavers[0])
-        dZZ  = np.sum((ZZavers[:Ndata] - beta*ZZavers[Ndata]), axis=0)/(1.0*Ndata) 
+        dZZ  = np.sum((ZZavers[:Ndata]*weights - beta*ZZavers[Ndata]), axis=0)
         
         
         Norm = np.sqrt(np.sum(dZ*dZ) + np.sum(dX*dX) + np.sum(dZZ*dZZ))
