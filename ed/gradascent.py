@@ -2,9 +2,10 @@ from qutip import *
 from Hbuilder import *
 from bmachine import *
 
+import Hfile
 import pyutils
 import loadgmt,kevent
-import random as rm
+import numpy.random as rm
 from pylab import *
 import argparse
 import numpy as np
@@ -23,6 +24,7 @@ def main():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--data',       help='Data file',                  type=str)
     parser.add_argument('--seed',       help='Seed used to generate data', type=int, default=0)
+    parser.add_argument('--classic',    help='Perform classical training', action='store_true', default=False)
     parser.add_argument('--time',       help='Benchmark execution time ',  action='store_true', default=False)
     parser.add_argument('--verbose',    help='Verbose ',                   action='store_true', default=False)
     parser.add_argument('--inter','-I', help='Interactions file',          type=str)
@@ -35,6 +37,8 @@ def main():
     parser.add_argument('-H', help='Longitudinal field', type=float)
 
     args = vars(parser.parse_args())
+    print '--------------', args['seed']
+    rm.seed(args['seed'])
 
     #  Error handling ---------------------------------------------------------
     if not((args['inter'] is None) or (('X' in args) and 
@@ -46,12 +50,11 @@ def main():
        print 'Define interactions'
        return 0
 
-    print args['inter']
-    if (args['inter'] is not None) and (('X' in args) or 
-                                        ('Y' in args) or
-                                        ('J' in args) or
-                                        ('D' in args) or
-                                        ('H' in args)
+    if (args['inter'] is not None) and ((args['X'] is not None) or 
+                                        (args['Y'] is not None) or
+                                        (args['J'] is not None) or
+                                        (args['D'] is not None) or
+                                        (args['H'] is not None)
                                        ):
        print 'Conflicting arguments '
        return 0
@@ -61,7 +64,7 @@ def main():
     N = 0 
     beta = args['beta']
     if (args['inter'] is not None):
-        Z, X, ZZ, bonds = LoadInters(args.inter)
+        Z, X, ZZ, bonds = Hfile.LoadInters(args['inter'])
         N = len(Z)
     else:
         N = int(args['X'])*int(args['Y'])
@@ -75,14 +78,15 @@ def main():
     print '---------Data acquisition----------'
     # Load or generate training set -------------------------------------------
     Nclamped = N 
-    Ndata = 50 
+    Ndata = 50000 
     if (args['data'] is not None):
-        data = np.loadtxt(args['data'])
+        data = np.loadtxt(args['data'], dtype='int32')
         Nclamped = data.shape[1]
         if Nclamped>N: 
             print 'Training set vectors exceed the graph size'
             return 0
         Ndata = data.shape[0]
+        data  = data.tolist()
     else:
         if Nclamped>N: 
             print 'Training set vectors exceed the graph size'
@@ -96,7 +100,6 @@ def main():
             if i==0: probTable[i] = real(BM.evaluateProjector())
             else:    probTable[i] = probTable[i-1] + real(BM.evaluateProjector())
        
-        rm.seed(args['seed'])
         data = []
         index = 1
         for i in range(Ndata):
@@ -107,23 +110,23 @@ def main():
             data += [cbits]
         del BM
 
-    data = [[1, 0], [1,0], [1,0], [1,0], [0,1], [0,1], [0,1]]
-    Ndata = 7
+    #data = [[1, 0], [1,0], [1,0], [1,0], [0,1], [0,1], [0,1]]
+    #Ndata = 7
     
     
     # find unique states and count them
     udata = []
-    cdata = collections.OrderedDict
+    cdata = collections.OrderedDict()
     for i,d in enumerate(data):
-        if not(d in udata): 
-           udata += d
-           cdata[d]  = 1
-        else:
-           cdata[d] += 1 
-    weights = np.array(cdata.items())/float(Ndata)
+        if not(d in udata): udata += [d]; cdata[repr(d)]  = 1
+        else:                             cdata[repr(d)] += 1
+    weights = np.array(cdata.values())/float(Ndata)
     data    = udata
+    Ndata   = len(data)
+    print '--- Data (%d):    ' %len(data), data
+    print '--- Weights (%4.2f) : '%np.sum(weights) , weights 
+    weights = weights.reshape((Ndata,1))
 
-    print weights, data
 
     print '---------Gradient ascent----------'
     # Gradient descent --------------------------------------------------------
@@ -131,33 +134,34 @@ def main():
     # Compute the log-likelihood of the generating Hamiltonian
     BM = BoltzmannMachine(N, bonds, Z, X, ZZ, beta)
     gLL = 0
-    for cbits in data:
+    for i, cbits in enumerate(data):
         BM.setProjector(cbits)
-        gLL -= np.log(real(BM.evaluateProjector()))/(1.0 * Ndata)
+        gLL -= np.log(real(BM.evaluateProjector()))*weights[i]
 
     # General an initial guess for the Hamiltonian
     gdZ  = np.random.randn(N)*max([max(Z),0.5])+Z
-    gdX  = np.random.randn(N)*max([max(Z),0.5])+X
+    if args['classic']:  gdX  = np.zeros_like(Z)
+    else:                gdX  = np.random.randn(N)*max([max(X),0.5])+X
     gdZZ = np.random.randn(Nbonds)*max([max(Z),0.5])+ZZ
    
-    gdZ  = np.array([-0.03040965, -0.04240908])
-    gdX  = np.array([-1.0,-1.0])
-    gdZZ = np.array([-0.004542226])
+    #gdZ  = np.array([-0.03040965, -0.04240908])
+    #gdX  = np.array([-1.0,-1.0])
+    #gdZZ = np.array([-0.004542226])
     print "Initial guess for Z: ",  gdZ
     print "Initial guess for X: ",  gdX
     print "Initial guess for ZZ: ", gdZZ
 
     # Initialize proportionality factor schedule
-    LL = .5/beta    # left limit
-    RL = 0.05       # right limit
-    nsteps = 5000    # number of steps
+    LL = 1.8/beta    # left limit
+    RL = 0.4/beta   # right limit
+    nsteps = 200    # number of steps
     b    = (1.0*nsteps*RL)/(LL - RL)
     a    = LL*b
     step = 0
 
     Ts   = []
     Norm = 100.0 # Norm of the gradient 
-    while ((step < nsteps) and (Norm > 0.001)):
+    while ((step < nsteps) and (Norm > 0.00001)):
         
         if args['verbose']: print '----------------step ', step, '-------------------' 
         # Averages
@@ -179,11 +183,11 @@ def main():
         if args['time']: t0 = time.time()
         
         LL = 0
-        for cbits in data:
+        for i,cbits in enumerate(data):
             BM.setProjector(cbits)
-            LL -= np.log(real(BM.evaluateProjector()))/(1.0 * Ndata)
+            LL -= np.log(real(BM.evaluateProjector())) * weights[i]
         if args['verbose']: print '--- LL = %0.4f vs %0.4f' %(LL, gLL)
-        else:               print '--- step=%03d LL = %0.4f vs %0.4f' %(step,LL, gLL)
+        else:               print '--- step=%03d LL = %0.4f vs %0.4f' %(step, LL, gLL)
         
         if args['time']: Ts += [time.time() - t0]
         
@@ -193,8 +197,14 @@ def main():
         
         for i, cbits in enumerate(data):
             BM.setProjector(cbits)
-            Zavers[i, :], Xavers[i,:], ZZavers[i,:] = BM.computeLocalAverages()
-            #Zavers[i, :], ZZavers[i, :] = -1.0*(np.array(cbits)*2-1)*beta, (cbits[0]*2-1)*(cbits[1]*2-1)*beta
+            t = []
+            if args['classic']: 
+                Zavers[i, :] = -1.0*(np.array(cbits)*2-1)*beta
+                for j,bond in enumerate(bonds): 
+                    ZZavers[i, j] = (cbits[bond[0]]*2-1)*(cbits[bond[1]]*2-1)*beta
+                    t += [(cbits[bond[0]]*2-1)*(cbits[bond[1]]*2-1)*beta]
+            else: 
+                Zavers[i, :], Xavers[i,:], ZZavers[i,:] = BM.computeLocalAverages()
         BM.setProjector([]) 
         Zavers[Ndata,:], Xavers[Ndata,:], ZZavers[Ndata,:] = BM.computeLocalAverages()
         
@@ -202,19 +212,17 @@ def main():
         
         
         # Compute derivatives and the norm
-        dZ   = np.sum((Zavers[:Ndata]*weights  - beta*Zavers[Ndata]),  axis=0)
-        dX   = np.sum((Xavers[:Ndata]*weights  - beta*Xavers[Ndata]),  axis=0)
-        #dX   = np.zeros_like(Xavers[0])
-        dZZ  = np.sum((ZZavers[:Ndata]*weights - beta*ZZavers[Ndata]), axis=0)
-        
-        
+        if args['classic']: dX = np.zeros(N)
+        else:               dX = np.sum((Xavers[:Ndata,:]*weights),  axis=0) - beta*Xavers[Ndata]
+        dZ   = np.sum((Zavers[:Ndata,:]*weights),  axis=0) - beta*Zavers[Ndata]
+        dZZ  = np.sum((ZZavers[:Ndata,:]*weights), axis=0) - beta*ZZavers[Ndata]
         Norm = np.sqrt(np.sum(dZ*dZ) + np.sum(dX*dX) + np.sum(dZZ*dZZ))
         #eta   = a/(b+1.0*step)
-        eta = 0.1
+        eta = 1.6
        
         # Follow the negative gradient 
+        if not args['classic']: gdX   += -eta*dX
         gdZ   += -eta*dZ
-        gdX   += -eta*dX
         gdZZ  += -eta*dZZ
        
        
@@ -225,19 +233,19 @@ def main():
 
             print '    Z:  ',
             for i in range(N): 
-                zdata  = np.sum(Zavers[:Ndata,i] , axis = 0)/(1.0*Ndata)
+                zdata  = np.sum(Zavers[:Ndata,:]*weights , axis = 0)[i]
                 zmodel = Zavers[Ndata,i]
                 print '(%+0.3f vs %+0.3f) ' %(zdata, zmodel),
 
             print '\n    X:  ',
             for i in range(N):
-                xdata  = np.sum(Xavers[:Ndata,i] , axis = 0)/(1.0*Ndata)
+                xdata  = np.sum(Xavers[:Ndata,:]*weights , axis = 0)[i]
                 xmodel = Xavers[Ndata,i]
                 print '(%+0.3f vs %+0.3f) ' %(xdata, xmodel),
 
             print '\n    ZZ: ',
             for i in range(Nbonds): 
-                zzdata  = np.sum(ZZavers[:Ndata,i] , axis = 0)/(1.0*Ndata)
+                zzdata  = np.sum(ZZavers[:Ndata,:]*weights , axis = 0)[i]
                 zzmodel = ZZavers[Ndata,i]
                 print '(%+0.3f vs %+0.3f) ' %(zzdata, zzmodel),
             
