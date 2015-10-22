@@ -9,7 +9,7 @@ Inter  = []
 
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
-def EmbedSiteOper(site_oper, field, site, N):
+def Embed1SiteOper(site_oper, field, N, site):
     I = qeye(2)
     site_oper *= field
 
@@ -20,20 +20,41 @@ def EmbedSiteOper(site_oper, field, site, N):
 
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
-def Embed2SiteOper(site_oper, strength, siteA, siteB, N):
+def Embed2SiteOper(site_oper, strength, N, siteA, siteB):
     I = qeye(2)
     if siteB < siteA: 
        siteA, siteB = siteB, siteA
     
     operA = site_oper
     operB = site_oper
-    
-    pre  = EmbedSiteOper(operA, 1.0, siteA, siteA+1)
-    suff = EmbedSiteOper(operB, strength, siteB-siteA-1, N-siteA-1)
+   
+    pre  = Embed1SiteOper(operA, 1.0, siteA+1, siteA)
+    suff = Embed1SiteOper(operB, strength, N-siteA-1, siteB-siteA-1)
 
     return tensor(pre, suff)
 
 
+# ----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+def Embed3SiteOper(site_oper, strength, N, siteA, siteB, siteC):
+    I = qeye(2)
+    siteA, siteB, siteC = sorted([siteA, siteB, siteC]) 
+    operA = site_oper
+    operC = site_oper
+    
+    pre =  Embed2SiteOper(operA, 1.0, siteB+1, siteA, siteB)
+    suff = Embed1SiteOper(operC, strength, N-siteB-1, siteC-siteB-1)
+
+    return tensor(pre, suff)
+
+# ----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+def EmbedOper(site_oper, N, bond):
+    strength, bond = bond[-1], bond[:-1]
+    if len(bond) == 1: return Embed1SiteOper(site_oper, strength, N, *bond)
+    if len(bond) == 2: return Embed2SiteOper(site_oper, strength, N, *bond)
+    if len(bond) == 3: return Embed3SiteOper(site_oper, strength, N, *bond)
+    
 
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
@@ -95,12 +116,24 @@ def PBC_Rect(x, y, strength):
 
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
-def FullyConnected(N):
+def pairFullyConnected(N):
 
     bonds = []
     for i in range(N-1):
         for j in range(i+1, N):
             bonds += [[i,j]]
+
+    return bonds
+
+# ----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+def tripleFullyConnected(N):
+
+    bonds = []
+    for i in range(N-2):
+        for j in range(i+1, N-1):
+            for k in range(j+1, N):
+                bonds += [[i, j, k]]
 
     return bonds
 
