@@ -13,17 +13,18 @@ def bitfield(n):
 # ----------------------------------------------------------------------
 def LoadInters(fname):  
     header = open(fname, 'r').readlines()[1]
-    (nSz, nSx, nSzSz) = header[1:].split()
+    (nSz, nSx, nSzSz) = header[1:].split()[0:3]
     (nSz, nSx, nSzSz) = (int(nSz), int(nSx), int(nSzSz))
 
     data = np.loadtxt(fname, skiprows=2)
-    Zfield = data[:nSz,2]
-    Xfield = data[nSz:nSz+nSx, 2]
+    Zfield = data[:nSz,-2:]
+    Xfield = data[nSz:nSz+nSx, -2:]
     bonds  = data[nSz+nSx:, 0:2]
     bonds  = bonds.astype(int)
-    Inter  = data[nSz+nSx:, 2]
-    
-    return Zfield, Xfield, Inter, bonds
+    Inter  = data[nSz+nSx:, :]
+
+    return Zfield, Xfield, Inter,  bonds
+
 
 #------------------------------------------------------------------------------
 # Acquire data

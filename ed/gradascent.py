@@ -204,9 +204,9 @@ def main():
                     ZZavers[i, j] = (cbits[bond[0]]*2-1)*(cbits[bond[1]]*2-1)*beta
                     t += [(cbits[bond[0]]*2-1)*(cbits[bond[1]]*2-1)*beta]
             else: 
-                Zavers[i, :], Xavers[i,:], ZZavers[i,:] = BM.computeLocalAverages()
+                (Zavers[i, :], Xavers[i,:], ZZavers[i,:]) = np.split(BM.computeLocalAverages(), [N, N+N])
         BM.setProjector([]) 
-        Zavers[Ndata,:], Xavers[Ndata,:], ZZavers[Ndata,:] = BM.computeLocalAverages()
+        (Zavers[Ndata,:], Xavers[Ndata,:], ZZavers[Ndata,:]) = np.split(BM.computeLocalAverages(), [N, N+N])
         
         if args['time']: Ts += [time.time() - t0]
         

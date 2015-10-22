@@ -1,46 +1,36 @@
 from qutip    import *
-from Hbuilder import *
+import Hbuilder
 
-from scipy.integrate import simps
-from scipy.integrate import trapz 
+from scipy.integrate import simps, trapz
 import numpy as np
-from pylab import real 
-import time
 
 class BoltzmannMachine:
-    def __init__(self, N, bonds, Zfield, Xfield, Inter, beta):
-        self.N = N
+    def __init__(self, N, beta, **kwargs):
+        self.Ns = N
+        self.Nb = len(kwargs['Z2'])
         I = qeye(2)
         self.H = tensor([I]*N) - tensor([I]*N)
        
-        for site, zfield in enumerate(Zfield):
-            if  zfield!=0:
-                self.H += EmbedSiteOper(sigmaz(), zfield, site, N)
-
-        for site, xfield in enumerate(Xfield):
-            if  xfield!=0:
-                self.H += EmbedSiteOper(sigmax(), xfield, site, N)
-
-        self.bonds = bonds
-        for i,inter in enumerate(Inter):
-            siteA, siteB = bonds[i]
-            if  inter!=0:
-                self.H += Embed2SiteOper(sigmaz(), inter, siteA, siteB, N)
-       
+        for itype, bonds in kwargs.iteritems():
+            if itype == 'X': oper = sigmax()
+            else:            oper = sigmaz()
+            for bond in bonds:
+                self.H += Hbuilder.EmbedOper(oper, N, bond)  
+        
         self.beta = beta
 
         self.rho  = (-self.H*beta).expm()
 
         self.operZs = []
         self.operXs = []
-        for site in range(self.N):
-            self.operZs += [EmbedSiteOper(sigmaz(), 1.0, site, self.N)]
-            self.operXs += [EmbedSiteOper(sigmax(), 1.0, site, self.N)]
+        for site in range(N):
+            self.operZs += [Hbuilder.EmbedOper(sigmaz(), N, [site, 1.0])]
+            self.operXs += [Hbuilder.EmbedOper(sigmax(), N, [site, 1.0])]
             
         self.operZZs = []
-        for i,bond in enumerate(self.bonds):
-            (siteA, siteB) = (bond[0], bond[1])
-            self.operZZs += [Embed2SiteOper(sigmaz(), 1.0, siteA, siteB, self.N)]
+        for bond in kwargs['Z2'].copy():
+            bond[2] = 1.0 
+            self.operZZs += [Hbuilder.EmbedOper(sigmaz(), N, bond)]
 
 
     def setProjector(self, cbits):
@@ -52,8 +42,8 @@ class BoltzmannMachine:
                 ket = tensor(ket, basis(2,qbit))
             self.P = ket*ket.dag()
 
-        if (len(cbits)>0) and (len(cbits)!=self.N): self.P = tensor(self.P, tensor([qeye(2)]*(self.N-len(cbits))))
-        elif (len(cbits)==0):                       self.P = tensor(tensor([qeye(2)]*self.N))
+        if (len(cbits)>0) and (len(cbits)!=self.Ns): self.P = tensor(self.P, tensor([qeye(2)]*(self.N-len(cbits))))
+        elif (len(cbits)==0):                       self.P = tensor(tensor([qeye(2)]*self.Ns))
 
     def evaluateProjector(self):
         return (self.rho*self.P).tr()/self.rho.tr()
@@ -63,24 +53,21 @@ class BoltzmannMachine:
         Z  = U.tr()
         U /= Z
         if  ((not self.clamped) or (test)):
-            aveZ = []
-            aveX = []
-            for site in range(self.N):
-                aveZ += [real((U*self.operZs[site]).tr())]
+            aves = np.zeros(self.Ns+self.Ns+self.Nb) 
+            for site in range(self.Ns):
+                aves[site] = np.real((U*self.operZs[site]).tr())
             
-                oper = EmbedSiteOper(sigmax(), 1.0, site, self.N) 
-                aveX += [real((U*self.operXs[site]).tr())]
+                aves[self.Ns+site] += np.real((U*self.operXs[site]).tr())
 
-            aveZZ = []
-            for i in range(len(self.bonds)):
-                aveZZ += [real((U*self.operZZs[i]).tr())]
+            for i in range(self.Nb):
+                aves[2*self.Ns+i] += np.real((U*self.operZZs[i]).tr())
             
-            return aveZ, aveX, aveZZ
+            return aves
         else:
             Nsamples = 10 
-            eZ  = np.zeros((Nsamples+1,self.N))
-            eX  = np.zeros((Nsamples+1,self.N)) 
-            eZZ = np.zeros((Nsamples+1,len(self.bonds)))
+            eZ  = np.zeros((Nsamples+1,self.Ns))
+            eX  = np.zeros((Nsamples+1,self.Ns)) 
+            eZZ = np.zeros((Nsamples+1,self.Nb))
             # Evaluate time-evolved operators on a discrete grid
             tau = 1.0*self.beta/2.0/(Nsamples)
             Ub0 = ( self.H*tau).expm()
@@ -88,30 +75,22 @@ class BoltzmannMachine:
             for step in range(Nsamples+1):
                 if  step>0: U = Ub0*U*Uf0   
 
-                for site in range(self.N):
-                    #t = self.rho*self.P
-                    #t /= t.tr()
-                    #eZ[step][site] = real((self.operZs[site]*t).tr())
-                    eZ[step][site] = real((self.operZs[site]*U).tr())
-                    eX[step][site] = real((self.operXs[site]*U).tr())
-                    #eX[step][site] = real((self.operXs[site]*U).tr())
+                for site in range(self.Ns):
+                    eZ[step][site] = np.real((self.operZs[site]*U).tr())
+                    #eX[step][site] = np.real((self.operXs[site]*U).tr())
                 
-                for i in range(len(self.bonds)):
-                    #print 'bond ', i, ' oper: ', self.operZZs[i]
-                    eZZ[step][i] = real((self.operZZs[i]*U).tr())
+                for i in range(self.Nb):
+                    eZZ[step][i] = np.real((self.operZZs[i]*U).tr())
         
             # Numerically integrate 
-            (UaveZ, UaveX, UaveZZ) = ([], [], [])
+            UE = np.zeros(self.Ns+self.Ns+self.Nb) 
             xs  = np.linspace(0.0, Nsamples+1-1, Nsamples+1)*tau
-            #print eZ[:,0]
-            for site in range(self.N):
-                UaveZ += [trapz(eZ[:,site], xs)*2.0]
-                UaveX += [trapz(eX[:,site], xs)*2.0]
-                #UaveZ += [simps(eZ[:,site], xs)]
-                #UaveX += [simps(eX[:,site], xs)]
+            for site in range(self.Ns):
+                UE[site]            = trapz(eZ[:,site], xs)*2.0
+                #UE[self.Ns + site] += trapz(eX[:,site], xs)*2.0
             
-            for bond in range(len(self.bonds)):
-                UaveZZ += [trapz(eZZ[:,bond], xs)*2.0]
-           
-            return UaveZ, UaveX, UaveZZ
+            for bond in range(self.Nb):
+                UE[2*self.Ns+bond] += [trapz(eZZ[:,bond], xs)*2.0]
+         
+            return UE 
         
