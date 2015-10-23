@@ -53,28 +53,28 @@ class BoltzmannMachine:
         elif (len(cbits)==0):                        self.P = sparse.eye(2**self.Ns)
 
     def evaluateProjector(self):
-        return np.sum((self.rho.multiply(self.P)).diagonal())/np.sum(self.rho.diagonal())
+        return np.sum((self.rho*self.P).diagonal())/np.sum(self.rho.diagonal())
     
     def computeLocalAverages(self, test = False):
-        U  = self.rho.multiply(self.P)
+        U  = self.rho*self.P
         Z  = np.sum(U.diagonal())
         U /= Z
         if  ((not self.clamped) or (test)):
             aves = np.zeros(self.Ns+self.Ns+self.Nb) 
             for site in range(self.Ns):
                 aves[site] = np.real(np.sum(
-                                            (U.multiply(self.operZs[site])).diagonal()
+                                            (U*self.operZs[site]).diagonal()
                                            )
                                     )
             
-                aves[self.Ns+site] += np.real(np.sum(
-                                                    (U.multiply(self.operXs[site])).diagonal()
-                                                    )
-                                             )
+                #aves[self.Ns+site] += np.real(np.sum(
+                #                                    (U*self.operXs[site]).diagonal()
+                #                                    )
+                #                             )
 
             for i in range(self.Nb):
                 aves[2*self.Ns+i] += np.real(np.sum(
-                                                   (U.multiply(self.operZZs[i])).diagonal()
+                                                   (U*self.operZZs[i]).diagonal()
                                                    )
                                             )
             return aves
@@ -88,18 +88,18 @@ class BoltzmannMachine:
             Ub0 = sl.expm( self.H*tau)
             Uf0 = sl.expm(-self.H*tau)
             for step in range(Nsamples+1):
-                if  step>0: U = Ub0.multiply(U.multiply(Uf0))
+                if  step>0: U = Ub0*U*Uf0
 
                 for site in range(self.Ns):
                     eZ[step][site] = np.real(np.sum(
-                                                    (self.operZs[site].multiply(U)).diagonal()
+                                                    (self.operZs[site]*U).diagonal()
                                                    )
                                             )
                     #eX[step][site] = np.real((self.operXs[site]*U).tr())
                 
                 for i in range(self.Nb):
                     eZZ[step][i] = np.real(np.sum(
-                                                  (self.operZZs[i].multiply(U)).diagonal()
+                                                  (self.operZZs[i]*U).diagonal()
                                                  )
                                           )
         
