@@ -57,7 +57,7 @@ class BoltzmannMachine:
             for site in range(self.Ns):
                 aves[site] = np.real((U*self.operZs[site]).tr())
             
-                aves[self.Ns+site] += np.real((U*self.operXs[site]).tr())
+                #aves[self.Ns+site] += np.real((U*self.operXs[site]).tr())
 
             for i in range(self.Nb):
                 aves[2*self.Ns+i] += np.real((U*self.operZZs[i]).tr())
