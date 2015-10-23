@@ -170,7 +170,8 @@ def main():
 
     # Check that we are in the correct ensemble
     dataName,outName = ssexyhelp.getWildCardString(options) 
-    
+   
+    print dataName,outName
     ssexy = ssexyhelp.SSEXYHelp(options)
     ssexy.getSimulationParameters()
     if  (not ssexy.id): 
@@ -185,6 +186,8 @@ def main():
             print head1
         else:
             pindex =  head1.index(options.plot)
+        print scAve1[:,pindex]
+        print scErr1[:,pindex]
         rcParams.update(mplrc.aps['params'])
         # Get the changing parameter that we are plotting against
         param = []

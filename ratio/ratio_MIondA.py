@@ -78,27 +78,26 @@ def main():
                ratios[i] = ratios[i-1]*ratios[i]
 
         #Plot the results
-        #ratios = -unumpy.log(ratios)/(float(Lx))
+        ratios = -unumpy.log(ratios)#/(float(Lx))
         if  len(As.shape) == 1:
             ratios = np.insert(ratios,0,0)
-            #ratios = ratios[:] + ratios[-1::-1]
-            #ratios = ratios - ratios[-1]
-            #ratios /=2.0
+            ratios = ratios[:] + ratios[-1::-1]
+            ratios = ratios - ratios[-1]
+            ratios /=2.0
         colors = ["#66CAAE", "#CF6BDD", "#E27844", "#7ACF57", "#92A1D6", "#E17597", "#C1B546",'b']
        
-        print As, As.shape, len(As.shape)
         if len(As.shape)==1: 
             x = (As+(As[1]-As[0]))
             x /=float(x[-1]) 
             x = np.insert(x,0,0)
-
-            #ax.errorbar(x,  unumpy.nominal_values(ratios),  unumpy.std_devs(ratios),  
-            #            color = colors[j], ls = '-', marker='s', 
-            #            label=r'$\mathrm{dA=%02d}$' %int(dA)) 
-                        #label=r'$\mathrm{L_x x L_y=%02d x %02d}$' %(int(Lx),int(Lx))) 
-            ax.plot(x,  unumpy.std_devs(ratios),  
+            ratios = ratios/float(Lx)
+            ax.errorbar(x,  unumpy.nominal_values(ratios),  unumpy.std_devs(ratios),  
                         color = colors[j], ls = '-', marker='s', 
                         label=r'$\mathrm{dA=%02d}$' %int(dA)) 
+                        #label=r'$\mathrm{L_x x L_y=%02d x %02d}$' %(int(Lx),int(Lx))) 
+            #ax.plot(x,  unumpy.std_devs(ratios),  
+            #            color = colors[j], ls = '-', marker='s', 
+            #            label=r'$\mathrm{dA=%02d}$' %int(dA)) 
            
             #d = 8.0/3.0
             #d = 8.0/1.0

@@ -139,13 +139,17 @@ def main():
     E0 = 0
     Es  = []
     dEs = []
+    srt = False
+    if args.estimator=='srt': srt=True
     for i,fileName in enumerate(fileNames):
         dataFile  = open(fileName,'r');
         dataLines = dataFile.readlines();
-
+        ffile = open(fileName,'r')
+        headers = ffile.readline().lstrip('#').split()
+        headers += ['srt']
         if len(dataLines) > 2:
-            params = GetFileParams(fileName)
-            if  args.estimator == 'srt':
+            #params = GetFileParams(fileName)
+            if  srt and not('ALRatio' in headers):
                 col    = GetHeaderNumber(fileName,'nAred')
                 dataR = loadtxt(fileName,usecols=col)
                 col    = GetHeaderNumber(fileName,'nAext')
@@ -156,28 +160,31 @@ def main():
                 daveE = amax(MCstat.bin(dataE[args.skip:]),axis=0)
                 aveE  = average(dataE[args.skip:])
                 #S2 = -umath.log(ufloat(aveE,daveE)/ufloat(aveR,daveR))
-                S2 = ufloat(aveE,daveE)/ufloat(aveR,daveR)
+                S2 = -1.0*umath.log(ufloat(aveE,daveE)/ufloat(aveR,daveR))
                 print 'Entropy = ', S2
                 Es  += [S2.n]
                 dEs += [S2.s]
             else:
-                col    = GetHeaderNumber(fileName,args.estimator)
+                if srt: col    = GetHeaderNumber(fileName,'ALRatio')
+                else  : col    = GetHeaderNumber(fileName,args.estimator)
                 data = loadtxt(fileName,usecols=col)
 
                 ID = fileName[-14:-4]
                 if  size(data) > 1:
                     sma = simpleMovingAverage(args.period,data[args.skip:])
-                    ax.plot(sma,color=colors[i%len(colors)],linewidth=3,linestyle='-',label=r'$T = %s$' %params['T'])
+                    ax.plot(sma,color=colors[i%len(colors)],linewidth=3,linestyle='-')
                     bins = MCstat.bin(data[args.skip:]) 
                     dataErr = amax(bins,axis=0)
                     dataAve = average(data[args.skip:])
-                    
+                    if srt or (args.estimator=='ALRatio'):
+                        S2 = -1.0*umath.log(ufloat(dataAve,dataErr)) 
+                        print 'Entropy = ', S2
+                        Es  += [S2.n]
+                        dEs += [S2.s]
                     #ax.plot(bins,color=colors[i%len(colors)],linewidth=1,marker='None',linestyle='-')
                     #if E0 == 0: E0 = dataAve
-                    print 'T= %s %0.6f +/- %0.6f ' %(params['T'],dataAve-E0,dataErr)
+                    print '%0.6f +/- %0.6f ' %(dataAve-E0,dataErr)
                     #print dataAve-E0
-                    Es  += [dataAve]
-                    dEs += [dataErr[0]]
         else:
             print '%s contains no measurements' %fileName
     xlabel('MC bins (p=%s)' %args.period)
@@ -185,7 +192,7 @@ def main():
     #tight_layout()
     print Es
     print dEs
-    legend() 
+    #legend() 
     show()
 
 # ----------------------------------------------------------------------

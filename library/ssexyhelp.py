@@ -37,8 +37,8 @@ def getParamMap(fname):
 
     
     params = {'r': int(fileParts[1]),
-              'x'     : int(fileParts[2]),       
-              'y'     : int(fileParts[3])}
+              'x': int(fileParts[2]),       
+              'y': int(fileParts[3])}
     if 't' in fileParts[4]: params['T']    = float(fileParts[4][1:])
     else:                   params['b']    = float(fileParts[4][1:])
     k = 5
@@ -50,7 +50,7 @@ def getParamMap(fname):
         if 'p' in fileParts[k]: params['p'] = int(fileParts[k][1:])
     return params 
 
-##---------------------------------------------------------------------------
+#---------------------------------------------------------------------------
 def getReduceParamMap(fname):
     '''Get the parameters from the output filename.  
     '''
@@ -61,8 +61,12 @@ def getReduceParamMap(fname):
     paramMap = {}
     for part in fileParts:
         if  '-' in part:
+            if  '--' in part: 
+                (item,temp,value)=part.split('-')
+                value = '-' + value
+            else:
+                (item,value)=part.split('-')
             #paramMap.update(dict([part.split('-')]))
-            (item,value)=part.split('-')
             if '.' in value: paramMap[item] = float(value)
             else:            paramMap[item] = value
         else:
@@ -150,6 +154,9 @@ class ScalarReduce:
      def loadData(self):
          self.data     = loadtxt(self.fname)
          
+# -------------------------------------------------------------------------------
+     def getData(self):
+         return self.data
 # -------------------------------------------------------------------------------
      def getrParams(self):
          if len(self.data.shape)>1: return self.rvar, self.data[:,0]
