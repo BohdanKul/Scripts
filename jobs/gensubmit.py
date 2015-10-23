@@ -20,6 +20,7 @@ def main():
     parser = ArgumentParser(description="Build submission scripts for various clusters") 
     parser.add_argument("file", help='configuration file')
     parser.add_argument('-b','--batch', type=int, help='Turn on batch mode. Sets the number of RG seeds.')
+    parser.add_argument('-s','--shift', type=int, default = 0, help='Seed shift for the batch job')
     parser.add_argument("cluster", metavar="cluster", choices=['clumeq','westgrid','sharcnet','scinet','bluemoon'],\
             help="target cluster: [westgrid,sharcnet,scinet,clumeq,bluemoon]") 
     parser.add_argument("-r",type=str, dest='run', default="",help="optional JobId number that will be added to the scripts name")
@@ -103,7 +104,7 @@ def main():
 
     ncommandLines = []
     if  args.batch!=None:
-        for j in range(100,100+args.batch):
+        for j in range(args.shift,args.shift+args.batch):
             for commandLine in commandLines:
                 ncommandLines.append(commandLine + ' -p %d ' %j)
         commandLines=ncommandLines

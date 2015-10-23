@@ -195,7 +195,8 @@ class SSEXYHelp:
         self.params = {}
         self.id = []
         for fname in fileNames:
-            ID = self.getID(fname)
+            #ID = self.getID(fname)
+            ID = fname
             self.id.append(ID)
             self.params[ID] = getParamMap(fname)
 
@@ -215,7 +216,8 @@ class SSEXYHelp:
         # Otherwise we just go through and get the ID's we need
         else:
             for id in idList: 
-                lsCommand = 'ls -1 %s%s-*%s.dat' % (self.baseDir,type,id)
+                #lsCommand = 'ls -1 %s%s-*%s.dat' % (self.baseDir,type,id)
+                lsCommand = 'ls -1 %s%s' % (self.baseDir, id)
                 fileNames.extend(os.popen(lsCommand).read().split('\n'))
                 fileNames.pop() 
 
