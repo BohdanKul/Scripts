@@ -19,10 +19,11 @@ def LoadInters(fname):
     data = np.loadtxt(fname, skiprows=2)
     Zfield = data[:nSz,-2:]
     Xfield = data[nSz:nSz+nSx, -2:]
-    bonds  = data[nSz+nSx:, 0:2]
+    bonds  = data[nSz+nSx:nSz+nSx+nSzSz, -3:-1]
     bonds  = bonds.astype(int)
-    Inter  = data[nSz+nSx:, :]
+    Inter  = data[nSz+nSx:nSz+nSz+nSzSz, -3:]
 
+    print bonds
     return Zfield, Xfield, Inter,  bonds
 
 

@@ -88,7 +88,12 @@ def main():
     if  args['mode'] == 'pair':
         Hs   = np.hstack((np.arange(Ns).reshape((Ns,1)), Hs))
         Ds   = np.hstack((np.arange(Ns).reshape((Ns,1)), Ds)) 
-    np.savetxt(Hfname, np.vstack((Hs, Ds, Js)), fmt=' %1d', header=head)
+        np.savetxt(Hfname, np.vstack((Hs, Ds, Js)), fmt=' %1d', header=head)
+    if  args['mode'] == 'triple':
+        Hs   = np.hstack((np.arange(Ns).reshape((Ns,1)), np.arange(Ns).reshape((Ns,1)), Hs))
+        Ds   = np.hstack((np.arange(Ns).reshape((Ns,1)), np.arange(Ns).reshape((Ns,1)), Ds)) 
+        Js   = np.hstack((np.arange(Js.shape[0]).reshape((Js.shape[0],1)), Js)) 
+        np.savetxt(Hfname, np.vstack((Hs, Ds, Js, JJs)), fmt=' %1d', header=head)
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 if __name__ == "__main__": 

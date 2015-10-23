@@ -160,7 +160,8 @@ def main():
         else:           bonds, Js = PBC_Rect(int(args['X']), int(args['Y']), float(args['J']))
     Nb = len(Js)
    
-    
+   
+
     print '---------Data acquisition----------'
     # Load or generate training set -------------------------------------------
     Nclamped = Ns 
