@@ -1,56 +1,48 @@
-from qutip import *
-import numpy as np
-
-N = 8
-Bonds  = []
-Lfield = []
-Tfield = []
-Inter  = []
+import numpy        as np
+import scipy.sparse as sparse 
 
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 def Embed1SiteOper(site_oper, field, N, site):
-    I = qeye(2)
-    site_oper *= field
-
+    site_oper = site_oper.copy()*field
+    site = int(site)
     if N == 1:      return site_oper
-    elif site==0:   return tensor(site_oper, tensor([I]*(N-1)))
-    elif site==N-1: return tensor(tensor([I]*(N-1)), site_oper)
-    else:           return tensor(tensor([I]*site), site_oper, tensor([I]*(N-site-1))) 
+    elif site==0:   return sparse.kron(site_oper, sparse.eye(2**(N-1)))
+    elif site==N-1: return sparse.kron(sparse.eye(2**(N-1)), site_oper)
+    else:           return sparse.kron(sparse.kron(sparse.eye(2**site), site_oper), sparse.eye(2**(N-site-1))) 
 
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 def Embed2SiteOper(site_oper, strength, N, siteA, siteB):
-    I = qeye(2)
+    I = sparse.eye(2)
+    siteA, siteB = int(siteA), int(siteB)
     if siteB < siteA: 
        siteA, siteB = siteB, siteA
     
-    operA = site_oper
-    operB = site_oper
-   
+    operA = site_oper.copy()
+    operB = site_oper.copy()
     pre  = Embed1SiteOper(operA, 1.0, siteA+1, siteA)
     suff = Embed1SiteOper(operB, strength, N-siteA-1, siteB-siteA-1)
-
-    return tensor(pre, suff)
+    return sparse.kron(pre, suff)
 
 
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 def Embed3SiteOper(site_oper, strength, N, siteA, siteB, siteC):
-    I = qeye(2)
-    siteA, siteB, siteC = sorted([siteA, siteB, siteC]) 
-    operA = site_oper
-    operC = site_oper
+    I = sparse.eye(2)
+    siteA, siteB, siteC = sorted([int(siteA), int(siteB), int(siteC)]) 
+    operA = site_oper.copy()
+    operC = site_oper.copy()
     
     pre =  Embed2SiteOper(operA, 1.0, siteB+1, siteA, siteB)
     suff = Embed1SiteOper(operC, strength, N-siteB-1, siteC-siteB-1)
 
-    return tensor(pre, suff)
+    return sparse.kron(pre, suff)
 
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 def EmbedOper(site_oper, N, bond):
-    strength, bond = bond[-1], bond[:-1]
+    strength, bond = float(bond[-1]), bond[:-1]
     if len(bond) == 1: return Embed1SiteOper(site_oper, strength, N, *bond)
     if len(bond) == 2: return Embed2SiteOper(site_oper, strength, N, *bond)
     if len(bond) == 3: return Embed3SiteOper(site_oper, strength, N, *bond)
