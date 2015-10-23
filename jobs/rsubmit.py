@@ -23,7 +23,7 @@ def getPIMCommand(fname):
     for par,value in params.iteritems():
         if isinstance(value,int): command += "-%s %d "    %(par,value)
         else:                     command += "-%s %0.3f " %(par,value)
-    command += "-%s %d " %('t',params['a']+8)
+    command += "-%s %d " %('t',params['a']+16)
     return command
 
 # -----------------------------------------------------------------------------
@@ -96,13 +96,13 @@ def main():
     #print As
     for estFile in estFileNames:   
         stateFile =  'state'+estFile[9:]
-        #fsize = len(open(estFile,'r').readlines())
+        fsize = len(open(estFile,'r').readlines())
         #if os.path.getsize(stateFile) != 0: 
-        PIMCommand = getPIMCommand(estFile)
-        PIMCommand += '-m %d ' %(45000)
-        PIMCommand += '-s %s/%s' %(options.folder,stateFile)
-        print PIMCommand
-        SubmitData.append(PIMCommand)
+        if fsize > 100:
+            PIMCommand = getPIMCommand(estFile)
+            PIMCommand += '-m %d ' %(1500)
+            PIMCommand += '-s %s/%s' %(options.folder,stateFile)
+            SubmitData.append(PIMCommand)
 
     #switch back to folder we used to be 
     os.chdir(CurrentFolder)

@@ -29,6 +29,9 @@ def getParamMap(fname):
         if part == '':
             fileParts[n+1] = '-' + fileParts[n+1]
             pIndex.append(n)
+        elif ((len(part)==1) and (part.isalpha())):
+            fileParts[n+1] = part + '-' + fileParts[n+1]
+            fileParts.pop(n)
     for n in pIndex:
         fileParts.pop(n)
 
@@ -39,7 +42,7 @@ def getParamMap(fname):
     if 't' in fileParts[4]: params['T']    = float(fileParts[4][1:])
     else:                   params['b']    = float(fileParts[4][1:])
     k = 5
-    if 'd' in fileParts[5]: 
+    if 'd' in fileParts[5]:
         params['d']    = float(fileParts[5][1:])
         k = 6 
     if fileParts[k].isdigit(): params['a'] = int(fileParts[k])
@@ -199,7 +202,8 @@ class SSEXYHelp:
         self.params = {}
         self.id = []
         for fname in fileNames:
-            ID = self.getID(fname)
+            #ID = self.getID(fname)
+            ID = fname
             self.id.append(ID)
             self.params[ID] = getParamMap(fname)
 
@@ -219,7 +223,8 @@ class SSEXYHelp:
         # Otherwise we just go through and get the ID's we need
         else:
             for id in idList: 
-                lsCommand = 'ls -1 %s%s-*%s.dat' % (self.baseDir,type,id)
+                #lsCommand = 'ls -1 %s%s-*%s.dat' % (self.baseDir,type,id)
+                lsCommand = 'ls -1 %s%s' % (self.baseDir, id)
                 fileNames.extend(os.popen(lsCommand).read().split('\n'))
                 fileNames.pop() 
 

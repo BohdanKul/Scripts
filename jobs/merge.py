@@ -32,7 +32,7 @@ def ReadSkipping(fileName,skip=0):
     numLines = len(inLines)-skip
 
     # check in case we want to skip more lines than there are
-    if numLines > 950:
+    if numLines > 1000:
        for i in range(skip):
            inLines.pop(0)   
     else:
@@ -150,7 +150,8 @@ def mergeData(ssexy,type,newID,skip=0,isRestarted=False,ssexyIds=None,average=Fa
         if len(glob.glob(fname)) > 0:
            #if we havent yet an output file, create one
            if not fileExist:
-               outFile,numLines = CreateFileSkipping(fname,ssexyIds[0],newID,skip,average,waverage)
+               #outFile,numLines = CreateFileSkipping(fname,ssexyIds[0],newID,skip,average,waverage)
+               outFile,numLines = CreateFileSkipping(fname,ssexy.getID(ssexyIds[0]),newID,skip,average,waverage)
                fileExist = (outFile != '') 
                #taken it is a restarted job, if there is less measurements than we want to skip in 
                #the first file we will need to skip more in the files that follow
@@ -186,7 +187,7 @@ def getNewSSEXYID(ssexy):
     ''' Find a new SSEXYID which is the average of the ones to merge, and make sure it doesn't already exist'''
     newID = 0
     for id in ssexy.id:
-        newID += int(id)
+        newID += int(ssexy.getID(id))
     newID = int(newID/(1.0*len(ssexy.id)))
     # Now we keep incrementing the ID number until we are sure it is unique
     while ( (len(glob.glob('*est*%09d*' % newID)) > 0) or
@@ -225,6 +226,8 @@ def main():
     parser = OptionParser() 
     parser.add_option("-T", "--temperature", dest="T", type="float",
                       help="simulation temperature in Kelvin") 
+    parser.add_option("-d", "--delta", dest="d", type="float",
+                      help="delta") 
     parser.add_option("-b", "--beta", dest="b", type="float",
                       help="simulation temperature in inverse Kelvin") 
     parser.add_option("-x",  dest="x", type="float",
@@ -284,17 +287,19 @@ def main():
          for varp in sorted(MergeSets.iterkeys()):
              mergeSet = MergeSets[varp]
              print('\nMerged data files for %s=%s:\n' %(options.varp,varp))
-             print('SSEXYids to merge: %s' %mergeSet)
+             #print('SSEXYids to merge: %s' %mergeSet)
 
 
              #if there is only one ssexyId with a varp, the just copy the files
              if (len(mergeSet) == 1):
-                lsCommand = 'ls *state*%s*' %mergeSet[0]
+                #lsCommand = 'ls *state*%s*' %mergeSet[0]
+                lsCommand = 'ls *%s*' %mergeSet[0]
                 LogName = os.popen(lsCommand).read().split('\n')[0]
                 shutil.copyfile(LogName,'MERGED/'+LogName) 
                 
                 for type in ssexy.dataType: 
-                    lsCommand = "ls *%s*%s*" %(type,mergeSet[0]) 
+                    #lsCommand = "ls *%s*%s*" %(type,mergeSet[0]) 
+                    lsCommand = "ls %s" %(mergeSet[0]) 
                     fileName = os.popen(lsCommand).read().split('\n')[0]
                     outFile,numLines = CreateFileSkipping(fileName,mergeSet[0],mergeSet[0],options.skip,average = options.average,waverage=options.waverage)
                     print('%10d' %numLines)    
@@ -312,7 +317,8 @@ def main():
                  #Create new ssexyID
                  newID = getNewSSEXYID(ssexy)      
                  
-                 lsCommand = 'ls *state*%s*' %mergeSet[0]
+                 #lsCommand = 'ls *state*%s*' %mergeSet[0]
+                 lsCommand = 'ls *%s*' %mergeSet[0]
                  #oldLogName = os.popen(lsCommand).read().split('\n')[0]
                  #newLogName = oldLogName.replace(str(mergeSet[0]),str(newID))
                  #shutil.copyfile(oldLogName,'MERGED/'+newLogName)
