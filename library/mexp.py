@@ -2,8 +2,10 @@
 from numpy        import eye
 from numpy        import zeros
 from numpy        import frexp 
+from numpy        import dot
 from numpy.linalg import norm 
 from numpy.linalg import inv
+from numpy.linalg import matrix_power
 from math         import ceil
 
 import numpy as np
@@ -45,30 +47,29 @@ def PadeApproximantOfDegree(A,m):
 #   Pade approximant to EXP(A), where M = 3, 5, 7, 9 or 13.
 #   Series are evaluated in decreasing order of powers, which is
 #   in approx. increasing order of maximum norms of the terms.
-
     n = max(A.shape)
     c = getPadeCoefficients(m)
-
+    print 'm = ', m
     # Evaluate Pade approximant.
     if (m == 13):
         # For optimal evaluation need different formula for m >= 12.
-        A2 = A*A
-        A4 = A2*A2 
-        A6 = A2*A4
-        U = A * (A6*(c[13]*A6 + c[11]*A4 + c[9]*A2) + c[7]*A6 + c[5]*A4 + c[3]*A2 + c[1]*eye(n,n) )
-        V =      A6*(c[12]*A6 + c[10]*A4 + c[8]*A2) + c[6]*A6 + c[4]*A4 + c[2]*A2 + c[0]*eye(n,n)
+        A2 = dot(A,A)
+        A4 = dot(A2, A2) 
+        A6 = dot(A2, A4)
+        U = dot(A,(dot(A6, (c[13]*A6 + c[11]*A4 + c[9]*A2)) + c[7]*A6 + c[5]*A4 + c[3]*A2 + c[1]*eye(n,n)))
+        V =        dot(A6, (c[12]*A6 + c[10]*A4 + c[8]*A2)) + c[6]*A6 + c[4]*A4 + c[2]*A2 + c[0]*eye(n,n)
                 
-        F = inv(V-U)*(V+U)
+        F = dot(inv(V-U), (V+U))
 
     else: # m == 3, 5, 7, 9
         #Apowers = []*int(ceil((m+1)/2.0))
         Apowers = []
 
         Apowers.append(eye(n,n))
-        Apowers.append(A*A)
+        Apowers.append(dot(A,A))
         
         for j in range(2, int(ceil((m+1)/2.0))):
-            Apowers.append(Apowers[j-1]*Apowers[1])
+            Apowers.append(dot(Apowers[j-1], Apowers[1]))
     
         U = zeros((n,n)) 
         V = zeros((n,n))
@@ -82,8 +83,9 @@ def PadeApproximantOfDegree(A,m):
         for j in  range(m, 0, -2):     
             V = V + c[j-1]*Apowers[(j+1-1)//2]
     
-        F = inv(V-U)*(V+U)
-    
+        F = dot(inv(V-U), (V+U))
+   
+        print 'F ',F
     return F
 
 def expm(A):
@@ -96,23 +98,22 @@ def expm(A):
 
 # Initialization
     m_vals, theta = expmchk()
-
     normA = norm(A,1)
-
     if normA <= theta[-1]:
         # no scaling and squaring is required.
         for i in range(len(m_vals)):
+            print 'i ', i, len(m_vals)
             if normA <= theta[i]:
                 F = PadeApproximantOfDegree(A,m_vals[i])
                 break
     else:
         t,s = frexp(normA/float(theta[-1]))
         s = s - (t == 0.5) # adjust s if normA/theta(end) is a power of 2.
-        A = (A/2.0)**s          # Scaling
+        A = A/(2.0**s)          # Scaling
         F = PadeApproximantOfDegree(A,m_vals[-1])
         
         for i in range(s):
-            F = F*F   # Squaring
+            F = dot(F,F)   # Squaring
 
     return F
 # End of expm
