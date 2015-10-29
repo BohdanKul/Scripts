@@ -23,7 +23,6 @@ def LoadInters(fname):
     bonds  = bonds.astype(int)
     Inter  = data[nSz+nSx:nSz+nSz+nSzSz, -3:]
 
-    print bonds
     return Zfield, Xfield, Inter,  bonds
 
 
