@@ -1,6 +1,6 @@
 from qutip import *
 from Hbuilder import *
-from bmachine import *
+from bmachinenew import *
 
 import Hfile
 import pyutils
@@ -77,41 +77,41 @@ def main():
     
     print '---------Data acquisition----------'
     # Load or generate training set -------------------------------------------
-    Nclamped = N 
-    Ndata = 50000 
-    if (args['data'] is not None):
-        data = np.loadtxt(args['data'], dtype='int32')
-        Nclamped = data.shape[1]
-        if Nclamped>N: 
-            print 'Training set vectors exceed the graph size'
-            return 0
-        Ndata = data.shape[0]
-        data  = data.tolist()
-    else:
-        if Nclamped>N: 
-            print 'Training set vectors exceed the graph size'
-            return 0
-        BM = BoltzmannMachine(N, bonds, Z, X, ZZ , beta)
-        probTable = np.zeros(2**Nclamped)
-        for i in range(2**Nclamped):
-            cbits = bitfield(i)                              # convert i to a list of bits
-            cbits = [0]*(Nclamped-len(cbits))+cbits.tolist() # keep the list length constant   
-            BM.setProjector(cbits)
-            if i==0: probTable[i] = real(BM.evaluateProjector())
-            else:    probTable[i] = probTable[i-1] + real(BM.evaluateProjector())
-       
-        data = []
-        index = 1
-        for i in range(Ndata):
-            RN = rm.random()
-            index = searchsorted(probTable, RN)
-            cbits = bitfield(index)
-            cbits = [0]*(Nclamped-len(cbits))+cbits.tolist() # keep the list length constant 
-            data += [cbits]
-        del BM
+    #Nclamped = N 
+    #Ndata = 50000 
+    #if (args['data'] is not None):
+    #    data = np.loadtxt(args['data'], dtype='int32')
+    #    Nclamped = data.shape[1]
+    #    if Nclamped>N: 
+    #        print 'Training set vectors exceed the graph size'
+    #        return 0
+    #    Ndata = data.shape[0]
+    #    data  = data.tolist()
+    #else:
+    #    if Nclamped>N: 
+    #        print 'Training set vectors exceed the graph size'
+    #        return 0
+    #    BM = BoltzmannMachine(N, bonds, Z, X, ZZ , beta)
+    #    probTable = np.zeros(2**Nclamped)
+    #    for i in range(2**Nclamped):
+    #        cbits = bitfield(i)                              # convert i to a list of bits
+    #        cbits = [0]*(Nclamped-len(cbits))+cbits.tolist() # keep the list length constant   
+    #        BM.setProjector(cbits)
+    #        if i==0: probTable[i] = real(BM.evaluateProjector())
+    #        else:    probTable[i] = probTable[i-1] + real(BM.evaluateProjector())
+    #   
+    #    data = []
+    #    index = 1
+    #    for i in range(Ndata):
+    #        RN = rm.random()
+    #        index = searchsorted(probTable, RN)
+    #        cbits = bitfield(index)
+    #        cbits = [0]*(Nclamped-len(cbits))+cbits.tolist() # keep the list length constant 
+    #        data += [cbits]
+    #    del BM
 
-    #data = [[1, 0], [1,0], [1,0], [1,0], [0,1], [0,1], [0,1]]
-    #Ndata = 7
+    data = [[1, 0], [1,0], [1,0], [1,0], [0,1], [0,1], [0,1]]
+    Ndata = 7
     
     
     # find unique states and count them
@@ -132,11 +132,11 @@ def main():
     # Gradient descent --------------------------------------------------------
     
     # Compute the log-likelihood of the generating Hamiltonian
-    BM = BoltzmannMachine(N, bonds, Z, X, ZZ, beta)
+    #BM = BoltzmannMachine(N, bonds, Z, X, ZZ, beta)
     gLL = 0
-    for i, cbits in enumerate(data):
-        BM.setProjector(cbits)
-        gLL -= np.log(real(BM.evaluateProjector()))*weights[i]
+    #for i, cbits in enumerate(data):
+    #    BM.setProjector(cbits)
+    #    gLL -= np.log(real(BM.evaluateProjector()))*weights[i]
 
     # General an initial guess for the Hamiltonian
     gdZ  = np.random.randn(N)*max([max(Z),0.5])+Z
@@ -144,12 +144,16 @@ def main():
     else:                gdX  = np.random.randn(N)*max([max(X),0.5])+X
     gdZZ = np.random.randn(Nbonds)*max([max(Z),0.5])+ZZ
    
-    #gdZ  = np.array([-0.03040965, -0.04240908])
-    #gdX  = np.array([-1.0,-1.0])
-    #gdZZ = np.array([-0.004542226])
+    gdZ  = np.array([[0, -0.03040965],
+                     [1, -0.04240908]])
+    gdX  = np.array([[0, -1.0],
+                     [1 ,-1.0]])
+    gdZZ = np.array([[0,1, -0.004542226]])
     print "Initial guess for Z: ",  gdZ
     print "Initial guess for X: ",  gdX
     print "Initial guess for ZZ: ", gdZZ
+    kwargs = {'X': gdX, 'Z1': gdZ, 'Z2': gdZZ}
+    BM = BoltzmannMachine(N, beta, **kwargs)
 
     # Initialize proportionality factor schedule
     LL = 1.8/beta    # left limit
@@ -173,7 +177,8 @@ def main():
         
         if args['time']: t0 = time.time()
         
-        BM = BoltzmannMachine(N, bonds, gdZ, gdX, gdZZ, beta)
+        kwargs = {'X': gdX, 'Z1': gdZ, 'Z2': gdZZ}
+        BM = BoltzmannMachine(N, beta, **kwargs)
         
         if args['time']: Ts += [time.time() - t0]
         
@@ -218,12 +223,12 @@ def main():
         dZZ  = np.sum((ZZavers[:Ndata,:]*weights), axis=0) - beta*ZZavers[Ndata]
         Norm = np.sqrt(np.sum(dZ*dZ) + np.sum(dX*dX) + np.sum(dZZ*dZZ))
         #eta   = a/(b+1.0*step)
-        eta = 1.6
+        eta = 0.1
        
         # Follow the negative gradient 
-        if not args['classic']: gdX   += -eta*dX
-        gdZ   += -eta*dZ
-        gdZZ  += -eta*dZZ
+        #if not args['classic']: gdX   += -eta*dX
+        gdZ[:,-1]+= -eta*dZ
+        gdZZ[:,-1]  += -eta*dZZ
        
        
         if  args['time']:
