@@ -5,6 +5,13 @@ import Hbuilder
 import mexp                
 from   scipy.integrate import simps, trapz
 
+def Bits2Int(bitlist):
+    out = 0
+    for bit in bitlist:
+        out = (out << 1) | bit
+
+    return out
+
 class BoltzmannMachine:
     def __init__(self, N, beta, **kwargs):
         self.Ns = N
@@ -32,7 +39,10 @@ class BoltzmannMachine:
         
         self.rho  = np.matrix(mexp.expm(-self.H*beta), copy=False)
         
-        self.rhoN = self.rho/np.sum(self.rho.diagonal())
+        #self.rhoN = self.rho/np.sum(self.rho.diagonal())
+        self.rhoN = np.diagonal(self.rho).copy()
+        self.rhoN /= np.sum(self.rhoN)
+       
         #print 'X1: ', kwargs['X'][:,-1]
         #print 'Z1: ', kwargs['Z1'][:,-1]
         #print 'Z2: ', kwargs['Z2'][:,-1]
@@ -50,33 +60,29 @@ class BoltzmannMachine:
             bond[-1] = 1.0 
             self.operZZs += [Hbuilder.EmbedOper(Z, N, bond, True)]
         
-        #print
-        #print self.H
-        #print
-        #print self.rho
     def setProjector(self, cbits):
+        self.bindex = Bits2Int(cbits)
         self.clamped = False
         if  len(cbits)>0:
             self.clamped = True
-            ket = sparse.csc_matrix(np.array((1-cbits[0], cbits[0])))
-            for qbit in cbits[1:]:
-                ket = sparse.kron(ket, sparse.csc_matrix(np.array((1-qbit, qbit))))
-            self.P = sparse.kron(ket.transpose(), ket)
+        #    ket = sparse.csc_matrix(np.array((1-cbits[0], cbits[0])))
+        #    for qbit in cbits[1:]:
+        #        ket = sparse.kron(ket, sparse.csc_matrix(np.array((1-qbit, qbit))))
+        #    self.P = sparse.kron(ket.transpose(), ket)
 
-        if (len(cbits)>0) and (len(cbits)!=self.Ns): self.P = sparse.kron(self.P, sparse.qye(2**(self.N-len(cbits))))
-        elif (len(cbits)==0):                        self.P = sparse.eye(2**self.Ns, format="csc")
+        #if (len(cbits)>0) and (len(cbits)!=self.Ns): self.P = sparse.kron(self.P, sparse.qye(2**(self.N-len(cbits))))
+        #elif (len(cbits)==0):                        self.P = sparse.eye(2**self.Ns, format="csc")
 
-    def evaluateProjector(self):
-        #print self.rhoN.diagonal()
-        #print self.rhoN*self.P.todense()
-        #print np.sum((self.rhoN*self.P).diagonal())
-        #print 
-        return np.sum((self.rhoN*self.P).diagonal())
+        #print self.rhoN[self.bindex, self.bindex]
+        #return np.sum((self.rhoN*self.P).diagonal())
+        return self.rhoN[self.bindex]
     
     def computeLocalAverages(self, test = False):
-        U  = self.rho*self.P
-        U /= np.sum(U.diagonal())
+        #U  = self.rho*self.P
+        #U /= np.sum(U.diagonal())
+        
         if  ((not self.clamped) or (test)):
+            U = self.rho/np.sum(self.rho.diagonal())
             aves = np.zeros(self.Ns+self.Ns+self.Nb) 
             for site in range(self.Ns):
                 aves[site] = np.real(np.sum(
@@ -96,6 +102,10 @@ class BoltzmannMachine:
                                             )
             return aves
         else:
+            U  = np.matrix(np.zeros((2**self.Ns, 2**self.Ns)), copy=False)
+            Prob = self.rho[self.bindex, self.bindex] 
+            U[:, self.bindex]  = self.rho[:,  self.bindex]/Prob
+
             Nsamples = 8 
             eZ  = np.zeros((Nsamples+1,self.Ns))
             eX  = np.zeros((Nsamples+1,self.Ns)) 
