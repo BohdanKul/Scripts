@@ -3,49 +3,60 @@ import scipy.sparse as sparse
 
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
-def Embed1SiteOper(site_oper, field, N, site):
+def I(kron, eye, Nl):
+    beye = eye
+    for i in range(Nl-1): 
+        beye = kron(beye, eye)
+    return beye
+
+# ----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+def Embed1SiteOper(site_oper, field, N, eye, kron, site):
     site_oper = site_oper.copy()*field
     site = int(site)
     if N == 1:      return site_oper
-    elif site==0:   return sparse.kron(site_oper, sparse.eye(2**(N-1)))
-    elif site==N-1: return sparse.kron(sparse.eye(2**(N-1)), site_oper)
-    else:           return sparse.kron(sparse.kron(sparse.eye(2**site), site_oper), sparse.eye(2**(N-site-1))) 
+    elif site==0:   return kron(site_oper, I(kron, eye, N-1)) 
+    elif site==N-1: return kron(I(kron, eye, N-1), site_oper)
+    else:           return kron(
+                                kron(I(kron, eye, site), site_oper), 
+                                I(kron, eye, N-site-1)
+                               ) 
 
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
-def Embed2SiteOper(site_oper, strength, N, siteA, siteB):
-    I = sparse.eye(2)
+def Embed2SiteOper(site_oper, strength, N, eye, kron, siteA, siteB):
     siteA, siteB = int(siteA), int(siteB)
-    if siteB < siteA: 
-       siteA, siteB = siteB, siteA
+    if siteB < siteA: siteA, siteB = siteB, siteA
     
     operA = site_oper.copy()
     operB = site_oper.copy()
-    pre  = Embed1SiteOper(operA, 1.0, siteA+1, siteA)
-    suff = Embed1SiteOper(operB, strength, N-siteA-1, siteB-siteA-1)
-    return sparse.kron(pre, suff)
+    pre  = Embed1SiteOper(operA, 1.0, siteA+1, eye, kron, siteA)
+    suff = Embed1SiteOper(operB, strength, N-siteA-1, eye, kron, siteB-siteA-1)
+    return kron(pre, suff)
 
 
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
-def Embed3SiteOper(site_oper, strength, N, siteA, siteB, siteC):
-    I = sparse.eye(2)
+def Embed3SiteOper(site_oper, strength, N, eye, kron, siteA, siteB, siteC):
     siteA, siteB, siteC = sorted([int(siteA), int(siteB), int(siteC)]) 
     operA = site_oper.copy()
     operC = site_oper.copy()
     
-    pre =  Embed2SiteOper(operA, 1.0, siteB+1, siteA, siteB)
-    suff = Embed1SiteOper(operC, strength, N-siteB-1, siteC-siteB-1)
+    pre =  Embed2SiteOper(operA, 1.0, siteB+1, eye, kron, siteA, siteB)
+    suff = Embed1SiteOper(operC, strength, N-siteB-1, eye, kron, siteC-siteB-1)
 
-    return sparse.kron(pre, suff)
+    return kron(pre, suff)
 
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
-def EmbedOper(site_oper, N, bond):
+def EmbedOper(site_oper, N, bond, bsparse=False):
+    if bsparse: eye  = sparse.eye(2); kron = sparse.kron
+    else:       eye  =     np.eye(2); kron =     np.kron
+
     strength, bond = float(bond[-1]), bond[:-1]
-    if len(bond) == 1: return Embed1SiteOper(site_oper, strength, N, *bond)
-    if len(bond) == 2: return Embed2SiteOper(site_oper, strength, N, *bond)
-    if len(bond) == 3: return Embed3SiteOper(site_oper, strength, N, *bond)
+    if len(bond) == 1: return Embed1SiteOper(site_oper, strength, N, eye, kron, *bond)
+    if len(bond) == 2: return Embed2SiteOper(site_oper, strength, N, eye, kron, *bond)
+    if len(bond) == 3: return Embed3SiteOper(site_oper, strength, N, eye, kron, *bond)
     
 
 # ----------------------------------------------------------------------
