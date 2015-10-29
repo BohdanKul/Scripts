@@ -4,7 +4,7 @@ import numpy.random as rm
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b as LBFGS
 
-(Ns, Nb, counter, beta, fname) = (0,0,0,0,'')
+(Ns, Nb, counter, beta, fname, mode, delta) = (0,0,0,0,'','class', 0)
 (data, weights, bonds) = ([],[],[])
 
 #------------------------------------------------------------------------------
@@ -23,16 +23,13 @@ def getLL(Hs, Ds, Js):
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
 def progtracker(inter):
-    global Ns, counter, beta, fname
+    global Ns, counter, beta, fname, mode
     global data, weights, bonds
 
     Nb = len(bonds)
     counter += 1
-    (Hs, Ds, Js) = np.split(inter, [Ns, Ns+Ns])
-    Ds = np.transpose(np.vstack((np.arange(len(Ds)), Ds)))
-    Hs = np.transpose(np.vstack((np.arange(len(Hs)), Hs)))
-    Js = np.hstack((bonds, Js.reshape(Nb,1)))
-
+    Hs, Ds, Js = unpackInter(inter, bonds, Ns, mode)
+    
     # Compute the log-likelihood of the generating Hamiltonian
     kwargs = {'X': Ds, 'Z1': Hs, 'Z2': Js}
     BM = bmachine.BoltzmannMachine(Ns, beta, **kwargs)
@@ -41,9 +38,11 @@ def progtracker(inter):
         BM.setProjector(cbits)
         LL -= np.log(np.real(BM.evaluateProjector()))*weights[i]
     del BM
+
+    # store the values
     f = open(fname, 'a')
     str = '    %8.4f' %LL
-    for meas in inter:
+    for meas in np.hstack([Hs[:,-1], Ds[:,-1], Js[:,-1]]):
         str+= '    %8.4f' %meas
     str += '\n'
     f.write(str)
@@ -54,19 +53,15 @@ def progtracker(inter):
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
 def LLgrad(inter, *args):
+    ''' Train all couplings and fields'''
     (Ns, beta, bonds, data, weights, cmode) = args   
+    Nd = len(data)
     Nb = len(bonds) 
-    (Hs, Ds, Js) = np.split(inter, [Ns, Ns+Ns])
-     
-    Ds = np.transpose(np.vstack((np.arange(len(Ds)), Ds)))
-    Hs = np.transpose(np.vstack((np.arange(len(Hs)), Hs)))
-    Js = np.hstack((bonds, Js.reshape(Nb,1)))
-
+    
+    # initialize Boltzmann machine 
+    Hs, Ds, Js = unpackInter(inter, bonds, Ns, cmode)
     kwargs = {'X': Ds, 'Z1': Hs, 'Z2': Js}
     BM = bmachine.BoltzmannMachine(Ns, beta, **kwargs)
-   
-    Nd  = len(data)
-    aves  = np.zeros((Nd, Ns+Ns+Nb))
         
     # compute the log-likelihood
     vLL = 0
@@ -75,6 +70,7 @@ def LLgrad(inter, *args):
         vLL -= np.log(np.real(BM.evaluateProjector())) * weights[i]
      
     # compute the gradient
+    aves  = np.zeros((Nd, Ns+Ns+Nb))
     for i, cbits in enumerate(data):
         BM.setProjector(cbits)
         if (cmode=='class') and (i!=Nd-1): 
@@ -84,8 +80,46 @@ def LLgrad(inter, *args):
         else: 
             aves[i,:] = BM.computeLocalAverages()
     gLL = np.sum((aves*weights),  axis=0)
+    gLL = packInter(gLL, Ns, cmode)
     
     return vLL, gLL
+
+
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+def unpackInter(inter, bonds, Ns, mode):
+    if  mode=="class":     
+        (Hs, Js)     = np.split(inter, [Ns])
+        Ds = np.zeros(Ns)
+    elif mode=="quant":     
+        (Hs, D, Js)  = np.split(inter, [Ns, Ns+1])
+        Ds = np.ones(Ns)*D
+    elif mode=="quant_all": 
+        (Hs, Ds, Js) = np.split(inter, [Ns, Ns+Ns])
+    elif mode=="quant_stat": 
+        (Hs, Js) = np.split(inter, [Ns])
+        global delta
+        Ds = np.ones(Ns)*delta
+
+    
+    Nb = len(bonds) 
+    Ds = np.transpose(np.vstack((np.arange(Ns), Ds)))
+    Hs = np.transpose(np.vstack((np.arange(Ns), Hs)))
+    Js = np.hstack((bonds, Js.reshape(Nb,1)))
+
+    return Hs, Ds, Js
+
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+def packInter(gLL, Ns, mode):
+    (gHs, gDs, gJs) = np.split(gLL, [Ns, Ns+Ns])
+    if   mode=="class":      return np.hstack([gHs, gJs])
+    elif mode=="quant":      return np.hstack([gHs, np.sum(gDs), gJs])
+    elif mode=="quant_stat": return np.hstack([gHs, gJs]) 
+    elif mode=="quant_all":  return gLL
+    
+    
+        
 
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
@@ -96,50 +130,30 @@ def bitfield(n):
 #------------------------------------------------------------------------------
 def main(): 
 
-    modes = ['class', 'quant']
+    modes  =  ['class', 'quant', 'quant_all', 'quant_stat'] 
+    
     # setup the command line parser options 
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--data',       help='Data file',                  type=str)
     parser.add_argument('--seed',       help='Seed used to generate data', type=int, default=0)
-    parser.add_argument('--mode',  choices=modes,  help='Perform classical training', default='class')
-    parser.add_argument('--delta', help='Transverse field', type=float)
-    parser.add_argument('--time',       help='Benchmark execution time ',  action='store_true', default=False)
-    parser.add_argument('--verbose',    help='Verbose ',                   action='store_true', default=False)
+    parser.add_argument('--data',       help='Data file',                  type=str)
     parser.add_argument('--inter','-I', help='Interactions file',          type=str)
+    parser.add_argument('--delta',      help='Transverse field',           type=float)
     parser.add_argument('--beta', '-b', help='Inverse temperature ',       type=float)
-    parser.add_argument('-X',           help='Lattice width ',             type=int)
-    parser.add_argument('-Y', help='Lattice height (set to 1 for a 1-d system)', type=int)
-    parser.add_argument('--OBC', help='Set open boundary conditions ', action='store_true', default=False)
-    parser.add_argument('-J', help='Ising interaction',  type=float)
-    parser.add_argument('-D', help='Transverse field',   type=float)
-    parser.add_argument('-H', help='Longitudinal field', type=float)
+    parser.add_argument('--mode',       help='Training mode', choices=modes, default='class')
 
     args = vars(parser.parse_args())
-    print '--------------', args['seed']
     rm.seed(args['seed'])
 
     #  Error handling ---------------------------------------------------------
-    if not((args['inter'] is None) or (('X' in args) and 
-                                       ('Y' in args) and
-                                       ('J' in args) and
-                                       ('D' in args) and
-                                       ('H' in args)
-                                      )):
+    if (args['inter'] is None):
        print 'Define interactions'
        return 0
 
-    if (args['inter'] is not None) and ((args['X'] is not None) or 
-                                        (args['Y'] is not None) or
-                                        (args['J'] is not None) or
-                                        (args['D'] is not None) or
-                                        (args['H'] is not None)
-                                       ):
-       print 'Conflicting arguments '
-       return 0
-    
-    if (args['mode']=='quant') and (args['delta'] is None):
+    if ((args['mode'] in ['quant', 'quant_all', 'quant_stat']) and (args['delta'] is None)):
        print 'Define the transverse field of the quantum model'
        return 0
+    global mode 
+    mode = args['mode']
 
     # Initialize couplings and fields -----------------------------------------
     Ns = 0 
@@ -148,7 +162,7 @@ def main():
     if (args['inter'] is not None):
         global bonds
         Hs, Ds, Js, bonds = Hfile.LoadInters(args['inter'])
-        if (args['mode']=='quant'): 
+        if (args['mode'] in ['quant', 'quant_all']): 
             Ds[:,1] = np.ones(len(Ds))*args['delta']
         global Ns
         Ns = len(Hs)
@@ -162,8 +176,8 @@ def main():
    
    
 
-    print '---------Data acquisition----------'
     # Load or generate training set -------------------------------------------
+    print '---------Data acquisition----------'
     Nclamped = Ns 
     Nd = 50000 
     if (args['data'] is not None):
@@ -199,12 +213,7 @@ def main():
             data += [cbits]
         del BM
 
-
-    #data = [[1, 0], [1,0], [1,0], [1,0], [0,1], [0,1], [0,1]]
-    #Nd = 7
-    
-    
-    # find unique states and count them
+    # Find unique states and count them
     udata = []
     cdata = collections.OrderedDict()
     for i,d in enumerate(data):
@@ -220,33 +229,42 @@ def main():
     print '--- Weights (%4.2f) : '%np.sum(weights) , weights 
     weights = weights.reshape((Nd,1))
 
-    # General an initial guess for the Hamiltonian
+    # General an initial guess for the Hamiltonian -----------------------------
     Hs[:,-1] = np.random.randn(Ns)*np.abs(Hs[:,-1]).max() 
     Js[:,-1] = np.random.randn(Nb)*np.abs(Js[:,-1]).max()
-    iparams = np.hstack([Hs[:,-1], Ds[:,-1], Js[:,-1]])
+    
+    if   args['mode'] == 'class':      iparams = np.hstack([Hs[:,-1],                Js[:,-1]])
+    elif args['mode'] == 'quant':      iparams = np.hstack([Hs[:,-1], args['delta'], Js[:,-1]])
+    elif args['mode'] == 'quant_all':  iparams = np.hstack([Hs[:,-1], Ds[:,-1],      Js[:,-1]])
+    elif args['mode'] == 'quant_stat': iparams = np.hstack([Hs[:,-1],                Js[:,-1]])
+
+ 
+    # impose limits on the trained values
+    #lims    = []
+    #f = 5.0
+    #for i,par in enumerate(iparams):
+    #    apar = np.abs(par)*f
+    #    lims.append((-apar, apar))
 
     # Compute the log-likelihood of the generating Hamiltonian
     gLL = getLL(Hs, Ds, Js)
 
     # Creat a log file 
-    delta = 0
+    global delta
     if args['delta']!= None: delta=args['delta']
     global fname 
     fname = 'train_delta-%04.2f_%s' %(args['delta'], args['data'][5:])
     
     f = open(fname, 'w')
     header = '#%11s' %('LL')
-    for i in range(Hs.shape[0]):
-        header += '%12s' %('H'+str(i)) 
-    for i in range(Ds.shape[0]):
-        header += '%12s' %('D'+str(i)) 
-    for bond in Js[:,:2].tolist():
-        header += '%12s' %('J(%d, %d)' %(bond[0], bond[1]))
+    for i in range(Hs.shape[0]):   header += '%12s' %('H'+str(i)) 
+    for i in range(Ds.shape[0]):   header += '%12s' %('D'+str(i)) 
+    for bond in Js[:,:2].tolist(): header += '%12s' %('J(%d, %d)' %(bond[0], bond[1]))
     header +='\n'
     f.write(header)
 
     st = '    %8.4f' %gLL
-    for meas in iparams:
+    for meas in np.hstack([Hs[:,-1], Ds[:,-1], Js[:,-1]]):
         st+= '    %8.4f' %meas
     st += '\n'
     f.write(st)
@@ -256,8 +274,14 @@ def main():
     print '---------Gradient ascent----------'
     # Gradient descent --------------------------------------------------------
     
+    
     counter = 0
-    fgrad, fLL, info = LBFGS(LLgrad, x0=iparams, args = (Ns, beta, bonds, data, weights, args['mode']=='class'), iprint = 1, pgtol=0.001, factr=1e13/2.2, callback=progtracker)  
+    fx, fLL, info = LBFGS(LLgrad, x0=iparams, args = (Ns, beta, bonds, data, weights, args['mode']), iprint = 1, pgtol=0.00001, factr=1e13/2.2/1000000.0, callback=progtracker)  
+
+    print fx
+    print info
+    #print lims
+
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 if __name__ == "__main__": 
