@@ -1,14 +1,12 @@
 #import scipy.sparse.eye as eye
-from numpy        import eye
-from numpy        import zeros
-from numpy        import frexp 
-from numpy        import dot
-from numpy.linalg import norm 
-from numpy.linalg import inv
-from numpy.linalg import matrix_power
-from math         import ceil
+from numpy import frexp 
+from math  import ceil
+from scipy.sparse import issparse
 
-import numpy as np
+import numpy               as np
+import scipy.sparse        as sp
+import numpy.linalg        as nlin
+import scipy.sparse.linalg as slin
 
 def expmchk():
 # EXPMCHK Check the class of input A and
@@ -49,43 +47,63 @@ def PadeApproximantOfDegree(A,m):
 #   in approx. increasing order of maximum norms of the terms.
     n = max(A.shape)
     c = getPadeCoefficients(m)
-    print 'm = ', m
     # Evaluate Pade approximant.
     if (m == 13):
         # For optimal evaluation need different formula for m >= 12.
-        A2 = dot(A,A)
-        A4 = dot(A2, A2) 
-        A6 = dot(A2, A4)
-        U = dot(A,(dot(A6, (c[13]*A6 + c[11]*A4 + c[9]*A2)) + c[7]*A6 + c[5]*A4 + c[3]*A2 + c[1]*eye(n,n)))
-        V =        dot(A6, (c[12]*A6 + c[10]*A4 + c[8]*A2)) + c[6]*A6 + c[4]*A4 + c[2]*A2 + c[0]*eye(n,n)
-                
-        F = dot(inv(V-U), (V+U))
+        if issparse(A):
+            A2 = A*A
+            A4 = A2*A2 
+            A6 = A2*A2
+            U =  A*(A6*(c[13]*A6 + c[11]*A4 + c[9]*A2) + c[7]*A6 + c[5]*A4 + c[3]*A2 + c[1]*sp.eye(n))
+            V =     A6*(c[12]*A6 + c[10]*A4 + c[8]*A2) + c[6]*A6 + c[4]*A4 + c[2]*A2 + c[0]*sp.eye(n)
+                    
+            F =  (slin.inv(V-U))*(V+U)
+
+             
+        else:
+            A2 = np.dot(A,A)
+            A4 = np.dot(A2, A2) 
+            A6 = np.dot(A2, A4)
+            U =  np.dot(A, np.dot(A6, c[13]*A6 + c[11]*A4 + c[9]*A2) + c[7]*A6 + c[5]*A4 + c[3]*A2 + c[1]*np.eye(n))
+            V =            np.dot(A6, c[12]*A6 + c[10]*A4 + c[8]*A2) + c[6]*A6 + c[4]*A4 + c[2]*A2 + c[0]*np.eye(n)
+                    
+            F =  np.dot(nlin.inv(V-U), (V+U))
 
     else: # m == 3, 5, 7, 9
         #Apowers = []*int(ceil((m+1)/2.0))
         Apowers = []
 
-        Apowers.append(eye(n,n))
-        Apowers.append(dot(A,A))
+        if issparse(A):
+            Apowers.append(sp.eye(n,n))
+            Apowers.append(A*A)
+        else:
+            Apowers.append(np.eye(n,n))
+            Apowers.append(np.dot(A,A))
         
         for j in range(2, int(ceil((m+1)/2.0))):
-            Apowers.append(dot(Apowers[j-1], Apowers[1]))
+            if issparse(A): Apowers.append(Apowers[j-1] * Apowers[1])
+            else:           Apowers.append(np.dot(Apowers[j-1], Apowers[1]))
     
-        U = zeros((n,n)) 
-        V = zeros((n,n))
+        if issparse(A):
+            U = sp.csc_matrix((n,n)) 
+            V = sp.csc_matrix((n,n))
+        else:
+            U = np.zeros((n,n)) 
+            V = np.zeros((n,n))
         
         # Not sure about the right point of the range
         for j in  range(m+1, 1, -2):     
             U = U + c[j-1]*Apowers[(j-1)//2]
     
-        U = A*U
+        if issparse(A):  U = A*U
+        else: U = np.dot(A, U)
         
         for j in  range(m, 0, -2):     
             V = V + c[j-1]*Apowers[(j+1-1)//2]
     
-        F = dot(inv(V-U), (V+U))
+        if issparse(A): F =       (slin.inv(V-U)*(V+U))
+        else:           F = np.dot(nlin.inv(V-U),(V+U))
    
-        print 'F ',F
     return F
 
 def expm(A):
@@ -98,22 +116,26 @@ def expm(A):
 
 # Initialization
     m_vals, theta = expmchk()
-    normA = norm(A,1)
+
+    normA = 0
+    if issparse(A): normA = np.amax((A.multiply(A.sign())).sum(0)) 
+    else:           normA = nlin.norm(A,1) 
+    
     if normA <= theta[-1]:
         # no scaling and squaring is required.
         for i in range(len(m_vals)):
-            print 'i ', i, len(m_vals)
             if normA <= theta[i]:
-                F = PadeApproximantOfDegree(A,m_vals[i])
+                F = PadeApproximantOfDegree(A, m_vals[i])
                 break
     else:
         t,s = frexp(normA/float(theta[-1]))
         s = s - (t == 0.5) # adjust s if normA/theta(end) is a power of 2.
-        A = A/(2.0**s)          # Scaling
-        F = PadeApproximantOfDegree(A,m_vals[-1])
+        A = A/(2.0**s)     # Scaling
+        F = PadeApproximantOfDegree(A, m_vals[-1])
         
         for i in range(s):
-            F = dot(F,F)   # Squaring
+            if issparse(A): F = F*F
+            else:           F = np.dot(F,F)   
 
     return F
 # End of expm
