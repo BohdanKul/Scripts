@@ -73,7 +73,7 @@ class BoltzmannMachine:
         #if (len(cbits)>0) and (len(cbits)!=self.Ns): self.P = sparse.kron(self.P, sparse.qye(2**(self.N-len(cbits))))
         #elif (len(cbits)==0):                        self.P = sparse.eye(2**self.Ns, format="csc")
 
-        #print self.rhoN[self.bindex, self.bindex]
+    def evaluateProjector(self):
         #return np.sum((self.rhoN*self.P).diagonal())
         return self.rhoN[self.bindex]
     
