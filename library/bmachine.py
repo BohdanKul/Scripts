@@ -96,7 +96,7 @@ class BoltzmannMachine:
                                             )
             return aves
         else:
-            Nsamples = 8 
+            Nsamples = 20 
             eZ  = np.zeros((Nsamples+1,self.Ns))
             eX  = np.zeros((Nsamples+1,self.Ns)) 
             eZZ = np.zeros((Nsamples+1,self.Nb))

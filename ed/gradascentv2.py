@@ -276,7 +276,7 @@ def main():
     
     
     counter = 0
-    fx, fLL, info = LBFGS(LLgrad, x0=iparams, args = (Ns, beta, bonds, data, weights, args['mode']), iprint = 1, pgtol=0.00001, factr=1e13/2.2/1000000.0, callback=progtracker)  
+    fx, fLL, info = LBFGS(LLgrad, x0=iparams, args = (Ns, beta, bonds, data, weights, args['mode']), iprint = 1, pgtol=0.001, factr=1e13/2.2, callback=progtracker)  
 
     print fx
     print info
