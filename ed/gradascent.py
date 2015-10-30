@@ -1,6 +1,6 @@
 from qutip import *
 from Hbuilder import *
-from bmachinenew import *
+from bmachine import *
 
 import Hfile
 import pyutils
