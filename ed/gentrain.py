@@ -19,7 +19,8 @@ def main():
     parser.add_argument('--mode', choices=['pair', 'triple', 'mean'], default='pair',    type=str)
     parser.add_argument('--alpha',     help='Amplitude of triple bond', default=0,    type=float)
     parser.add_argument('--seed',      help='RN seed', default=0,    type=int)
-    parser.add_argument('--beta','-b', help='Inverse temperature ',  type=int)
+    parser.add_argument('--beta','-b', help='Inverse temperature ',  type=float)
+    parser.add_argument('--mS',        help='Minimum  data entropy', type=float, default =0)
     parser.add_argument('--Nd',  '-M', help='The size of data set ', type=int)
     parser.add_argument('--Ns',  '-N', help='Number of spins ',      type=int)
 

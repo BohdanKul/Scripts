@@ -139,10 +139,10 @@ def main():
     #    gLL -= np.log(real(BM.evaluateProjector()))*weights[i]
 
     # General an initial guess for the Hamiltonian
-    gdZ  = np.random.randn(N)*max([max(Z),0.5])+Z
-    if args['classic']:  gdX  = np.zeros_like(Z)
-    else:                gdX  = np.random.randn(N)*max([max(X),0.5])+X
-    gdZZ = np.random.randn(Nbonds)*max([max(Z),0.5])+ZZ
+    #gdZ  = np.random.randn(N)*max([max(Z),0.5])+Z
+    #if args['classic']:  gdX  = np.zeros_like(Z)
+    #else:                gdX  = np.random.randn(N)*max([max(X),0.5])+X
+    #gdZZ = np.random.randn(Nbonds)*max([max(Z),0.5])+ZZ
    
     gdZ  = np.array([[0, -0.03040965],
                      [1, -0.04240908]])

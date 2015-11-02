@@ -4,49 +4,31 @@ import numpy.random as rm
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b as LBFGS
 
-(Ns, Nb, counter, beta, fname, mode, delta) = (0,0,0,0,'','class', 0)
+global Ns, Nb, bfirst, beta, fname, mode, delta
+global data, weights, bonds
+(Ns, Nb, bfirst, beta, fname, mode, delta) = (0,0, True,0,'','class', 0)
 (data, weights, bonds) = ([],[],[])
 
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
-def getLL(Hs, Ds, Js):
+def getLLandAves(Hs, Ds, Js):
     kwargs = {'X': Ds, 'Z1': Hs, 'Z2': Js}
     BM = bmachine.BoltzmannMachine(Ns, beta, **kwargs)
     gLL = 0
     for i, cbits in enumerate(data):
         BM.setProjector(cbits)
         gLL -= np.log(np.real(BM.evaluateProjector()))*weights[i]
+
+    BM.setProjector([])
+    aves = BM.computeLocalAverages()
     del BM
 
-    return gLL
+    return gLL, aves
 
-#------------------------------------------------------------------------------
-#------------------------------------------------------------------------------
+
 def progtracker(inter):
-    global Ns, counter, beta, fname, mode
-    global data, weights, bonds
-
-    Nb = len(bonds)
-    counter += 1
-    Hs, Ds, Js = unpackInter(inter, bonds, Ns, mode)
-    
-    # Compute the log-likelihood of the generating Hamiltonian
-    kwargs = {'X': Ds, 'Z1': Hs, 'Z2': Js}
-    BM = bmachine.BoltzmannMachine(Ns, beta, **kwargs)
-    LL = 0
-    for i, cbits in enumerate(data):
-        BM.setProjector(cbits)
-        LL -= np.log(np.real(BM.evaluateProjector()))*weights[i]
-    del BM
-
-    # store the values
-    f = open(fname, 'a')
-    str = '    %8.4f' %LL
-    for meas in np.hstack([Hs[:,-1], Ds[:,-1], Js[:,-1]]):
-        str+= '    %8.4f' %meas
-    str += '\n'
-    f.write(str)
-    f.close()
+    global bfirst
+    bfirst = True
 
     return 0
 
@@ -65,10 +47,10 @@ def LLgrad(inter, *args):
         
     # compute the log-likelihood
     vLL = 0
-    for i,cbits in enumerate(data):
+    for i,cbits in enumerate(data[:-1]):
         BM.setProjector(cbits)
         vLL -= np.log(np.real(BM.evaluateProjector())) * weights[i]
-     
+
     # compute the gradient
     aves  = np.zeros((Nd, Ns+Ns+Nb))
     for i, cbits in enumerate(data):
@@ -82,6 +64,26 @@ def LLgrad(inter, *args):
     gLL = np.sum((aves*weights),  axis=0)
     gLL = packInter(gLL, Ns, cmode)
     
+    #------------------------------------------------------------------------------
+    global bfirst
+    if bfirst:
+        global Ns, counter, beta, fname, mode
+        global data, weights, bonds
+
+        # store the values
+        f = open(fname, 'a')
+        str = '    %16.8E' %vLL
+        for meas in np.hstack([Hs[:,-1], Ds[:,-1], Js[:,-1]]):
+            str+= '    %16.8E' %meas
+        for meas in aves[-1,:]:
+            str+= '    %16.8E' %meas
+        
+        str += '\n'
+        
+        f.write(str)
+        f.close()
+        bfirst = False
+
     return vLL, gLL
 
 
@@ -247,7 +249,7 @@ def main():
     #    lims.append((-apar, apar))
 
     # Compute the log-likelihood of the generating Hamiltonian
-    gLL = getLL(Hs, Ds, Js)
+    gLL, aves = getLLandAves(Hs, Ds, Js)
 
     # Creat a log file 
     global delta
@@ -256,16 +258,21 @@ def main():
     fname = 'train_delta-%04.2f_%s' %(args['delta'], args['data'][5:])
     
     f = open(fname, 'w')
-    header = '#%11s' %('LL')
-    for i in range(Hs.shape[0]):   header += '%12s' %('H'+str(i)) 
-    for i in range(Ds.shape[0]):   header += '%12s' %('D'+str(i)) 
-    for bond in Js[:,:2].tolist(): header += '%12s' %('J(%d, %d)' %(bond[0], bond[1]))
+    header = '#%19s' %('LL')
+    for i in range(Hs.shape[0]):   header += '%20s' %('H'+str(i)) 
+    for i in range(Ds.shape[0]):   header += '%20s' %('D'+str(i)) 
+    for bond in Js[:,:2].tolist(): header += '%20s' %('J(%d, %d)' %(bond[0], bond[1]))
+    for i in range(Hs.shape[0]):   header += '%20s' %('<Z'+str(i)+'>') 
+    for i in range(Ds.shape[0]):   header += '%20s' %('<X'+str(i)+'>') 
+    for bond in Js[:,:2].tolist(): header += '%20s' %('<ZZ(%d, %d)>' %(bond[0], bond[1]))
     header +='\n'
     f.write(header)
 
-    st = '    %8.4f' %gLL
+    st = '    %16.8E' %gLL
     for meas in np.hstack([Hs[:,-1], Ds[:,-1], Js[:,-1]]):
-        st+= '    %8.4f' %meas
+        st+= '    %16.8E' %meas
+    for meas in aves:
+        st+= '    %16.8E' %meas
     st += '\n'
     f.write(st)
     f.close()
@@ -275,7 +282,6 @@ def main():
     # Gradient descent --------------------------------------------------------
     
     
-    counter = 0
     fx, fLL, info = LBFGS(LLgrad, x0=iparams, args = (Ns, beta, bonds, data, weights, args['mode']), iprint = 1, pgtol=0.00001, factr=1e13/2.2/1000000.0, callback=progtracker)  
 
     print fx
