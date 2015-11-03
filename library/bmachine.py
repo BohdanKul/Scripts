@@ -106,7 +106,7 @@ class BoltzmannMachine:
             Prob = self.rho[self.bindex, self.bindex] 
             U[:, self.bindex]  = self.rho[:,  self.bindex]/Prob
 
-            Nsamples = 8 
+            Nsamples = 12 
             eZ  = np.zeros((Nsamples+1,self.Ns))
             eX  = np.zeros((Nsamples+1,self.Ns)) 
             eZZ = np.zeros((Nsamples+1,self.Nb))
