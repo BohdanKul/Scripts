@@ -256,7 +256,10 @@ def main():
     global delta
     if args['delta']!= None: delta=args['delta']
     global fname 
-    fname = 'train_delta-%04.2f_%s' %(args['delta'], args['data'][5:])
+    fname = 'train_'
+    if args['mode'] == 'class': fname += 'mode-%s_' %args['mode']
+    else:                       fname += 'mode-%s_delta-%04.2f_' %(args['mode'], delta)
+    fname += args['data'][5:]
     
     f = open(fname, 'w')
     header = '#%11s' %('LL')
@@ -279,7 +282,7 @@ def main():
     
     
     counter = 0
-    fx, fLL, info = LBFGS(LLgrad, x0=iparams, args = (Ns, beta, bonds, data, weights, args['mode']), iprint = 1, pgtol=0.00001, factr=1e13/2.2/1000000.0, callback=progtracker)  
+    fx, fLL, info = LBFGS(LLgrad, x0=iparams, args = (Ns, beta, bonds, data, weights, args['mode']), iprint = 1, pgtol=1e-05, factr=1e13/2.2, maxiter=50, callback=progtracker)  
 
     print fx
     print info
