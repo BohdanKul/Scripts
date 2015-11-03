@@ -18,8 +18,9 @@ def main():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--mode', choices=['pair', 'triple', 'mean'], default='pair',    type=str)
     parser.add_argument('--alpha',     help='Amplitude of triple bond', default=0,    type=float)
-    parser.add_argument('--entropy',   help='Minimum desired dataset entropy', default=0,    type=float)
+    parser.add_argument('--minE',   help='Minimum desired dataset entropy', default=0,    type=float)
     parser.add_argument('--maxI',      help='Maximum number of iterations', default=1,    type=int)
+    parser.add_argument('--maxD',      help='Maximum number of vectors in the dataset ', default=100,    type=int)
     parser.add_argument('--seed',      help='RN seed', default=0,    type=int)
     parser.add_argument('--beta','-b', help='Inverse temperature ',  type=int)
     parser.add_argument('--Nd',  '-M', help='The size of data set ', type=int)
@@ -36,8 +37,10 @@ def main():
 
     Entropy  = 0
     bentropy = 0
+    bsize    = 1000
     nI = 0
-    while ((not (Entropy > args['entropy'])) and (nI < args['maxI'])):
+    weights = []
+    while (((not (Entropy > args['minE'])) or (len(weights)>args['maxD'])) and (nI < args['maxI'])):
         sites = np.arange(Ns)
         sites = sites.reshape((Ns,1))
         Ds    = np.zeros(Ns)
@@ -107,10 +110,10 @@ def main():
 
         Entropy = -1.0*np.sum(weights*np.log(weights))
         
-        if Entropy>bentropy:
+        if (Entropy>bentropy) and (len(weights)<args['maxD']):
            bentropy = Entropy 
            bdata = data
-           print "Entropy: ", Entropy, " iteration: ", nI," weights: ", weights
+           print "Entropy: ", Entropy, " iteration: ", nI, " size: ", len(weights)," weights: ", weights
         
 
         nI += 1

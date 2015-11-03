@@ -102,11 +102,11 @@ class BoltzmannMachine:
                                             )
             return aves
         else:
-            Nsamples = 20 
             U  = np.matrix(np.zeros((2**self.Ns, 2**self.Ns)), copy=False)
             Prob = self.rho[self.bindex, self.bindex] 
             U[:, self.bindex]  = self.rho[:,  self.bindex]/Prob
 
+            Nsamples = 12 
             eZ  = np.zeros((Nsamples+1,self.Ns))
             eX  = np.zeros((Nsamples+1,self.Ns)) 
             eZZ = np.zeros((Nsamples+1,self.Nb))
