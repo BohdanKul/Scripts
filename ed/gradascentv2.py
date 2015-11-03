@@ -223,10 +223,13 @@ def main():
     weights = np.array(cdata.values())/float(Nd)
     data    = udata
     data += [[]]          # add a vector with no bits clamped
+    entropy = -1.0*np.sum(weights*np.log(weights))
+    print type(weights), entropy
     weights = np.append(weights, -beta) # and its weight
     Nd   = len(data)
-    print '--- Data (%d):    ' %len(data), data
-    print '--- Weights (%4.2f) : '%np.sum(weights) , weights 
+    print '--- Data (%d):    '     %len(data), data
+    print '--- Weights (%4.2f) : ' %np.sum(weights) , weights 
+    print '--- Entropy : %4.2f'    %entropy
     weights = weights.reshape((Nd,1))
 
     # General an initial guess for the Hamiltonian -----------------------------
