@@ -4,50 +4,15 @@ import numpy.random as rm
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b as LBFGS
 
-(Ns, Nb, counter, beta, fname, mode, delta) = (0,0,0,0,'','class', 0)
+(Ns, Nb, counter, beta, fname, mode, delta, gradEval) = (0,0,0,0,'','class', 0, True)
 (data, weights, bonds) = ([],[],[])
 
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
-def getLL(Hs, Ds, Js):
-    kwargs = {'X': Ds, 'Z1': Hs, 'Z2': Js}
-    BM = bmachine.BoltzmannMachine(Ns, beta, **kwargs)
-    gLL = 0
-    for i, cbits in enumerate(data[:-1]):
-        BM.setProjector(cbits)
-        gLL -= np.log(np.real(BM.evaluateProjector()))*weights[i]
-    del BM
-
-    return gLL
-
-#------------------------------------------------------------------------------
-#------------------------------------------------------------------------------
 def progtracker(inter):
-    global Ns, counter, beta, fname, mode
-    global data, weights, bonds
-
-    Nb = len(bonds)
-    counter += 1
-    Hs, Ds, Js = unpackInter(inter, bonds, Ns, mode)
+    global gradEval 
+    gradEval = True
     
-    # Compute the log-likelihood of the generating Hamiltonian
-    kwargs = {'X': Ds, 'Z1': Hs, 'Z2': Js}
-    BM = bmachine.BoltzmannMachine(Ns, beta, **kwargs)
-    LL = 0
-    for i, cbits in enumerate(data):
-        BM.setProjector(cbits)
-        LL -= np.log(np.real(BM.evaluateProjector()))*weights[i]
-    del BM
-
-    # store the values
-    f = open(fname, 'a')
-    str = '    %8.4f' %LL
-    for meas in np.hstack([Hs[:,-1], Ds[:,-1], Js[:,-1]]):
-        str+= '    %8.4f' %meas
-    str += '\n'
-    f.write(str)
-    f.close()
-
     return 0
 
 #------------------------------------------------------------------------------
@@ -69,8 +34,10 @@ def LLgrad(inter, *args):
         BM.setProjector(cbits)
         vLL -= np.log(np.real(BM.evaluateProjector())) * weights[i]
      
+    
     # compute the gradient
     aves  = np.zeros((Nd, Ns+Ns+Nb))
+    
     for i, cbits in enumerate(data):
         BM.setProjector(cbits)
         if (cmode=='class') and (i!=Nd-1): 
@@ -79,7 +46,23 @@ def LLgrad(inter, *args):
                aves[i, 2*Ns+j] = (cbits[bond[0]]*2-1)*(cbits[bond[1]]*2-1)*beta
         else: 
             aves[i,:] = BM.computeLocalAverages()
+    
     gLL = np.sum((aves*weights),  axis=0)
+
+    # record the progress into a file
+    global gradEval
+    if gradEval:
+        st = '    %16.8E' %vLL
+        for meas in np.hstack([Hs[:,-1], Ds[:,-1], Js[:,-1]]): st+= '    %16.8E' %meas
+        for meas in gLL:                                       st+= '    %16.8E' %meas
+        st += '\n'
+        
+        global fname
+        f = open(fname, 'a')
+        f.write(st)
+        f.close()
+
+    gradEval = False
     gLL = packInter(gLL, Ns, cmode)
     
     return vLL, gLL
@@ -250,7 +233,6 @@ def main():
     #    lims.append((-apar, apar))
 
     # Compute the log-likelihood of the generating Hamiltonian
-    gLL = getLL(Hs, Ds, Js)
 
     # Creat a log file 
     global delta
@@ -262,18 +244,17 @@ def main():
     fname += args['data'][5:]
     
     f = open(fname, 'w')
-    header = '#%11s' %('LL')
-    for i in range(Hs.shape[0]):   header += '%12s' %('H'+str(i)) 
-    for i in range(Ds.shape[0]):   header += '%12s' %('D'+str(i)) 
-    for bond in Js[:,:2].tolist(): header += '%12s' %('J(%d, %d)' %(bond[0], bond[1]))
+    header = '#    %15s' %('LL')
+    for i in range(Hs.shape[0]):   header += '    %16s' %('H'+str(i)) 
+    for i in range(Ds.shape[0]):   header += '    %16s' %('D'+str(i)) 
+    for bond in Js[:,:2].tolist(): header += '    %16s' %('J(%d, %d)' %(bond[0], bond[1]))
+    
+    for i in range(Hs.shape[0]):   header += '    %16s' %('<Z%d>' %i) 
+    for i in range(Ds.shape[0]):   header += '    %16s' %('<X%d>' %i) 
+    for bond in Js[:,:2].tolist(): header += '    %16s' %('<ZZ(%d, %d)>' %(bond[0], bond[1]))
+
     header +='\n'
     f.write(header)
-
-    st = '    %8.4f' %gLL
-    for meas in np.hstack([Hs[:,-1], Ds[:,-1], Js[:,-1]]):
-        st+= '    %8.4f' %meas
-    st += '\n'
-    f.write(st)
     f.close()
 
 
