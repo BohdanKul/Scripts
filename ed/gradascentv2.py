@@ -15,6 +15,54 @@ def progtracker(inter):
     
     return 0
 
+
+def LL(inter, *args):
+    (Ns, beta, bonds, data, weights, cmode) = args   
+    Nd = len(data)
+    Nb = len(bonds) 
+    
+    # initialize Boltzmann machine 
+    Hs, Ds, Js = unpackInter(inter, bonds, Ns, cmode)
+    kwargs = {'X': Ds, 'Z1': Hs, 'Z2': Js}
+    BM = bmachine.BoltzmannMachine(Ns, beta, **kwargs)
+        
+    # compute the log-likelihood
+    vLL = 0
+    for i,cbits in enumerate(data[:-1]):
+        BM.setProjector(cbits)
+        vLL -= np.log(np.real(BM.evaluateProjector())) * weights[i]
+ 
+    del BM
+    return vLL
+
+def grad(inter, *args):
+    (Ns, beta, bonds, data, weights, cmode) = args   
+    Nd = len(data)
+    Nb = len(bonds) 
+    
+    # initialize Boltzmann machine 
+    Hs, Ds, Js = unpackInter(inter, bonds, Ns, cmode)
+    kwargs = {'X': Ds, 'Z1': Hs, 'Z2': Js}
+    BM = bmachine.BoltzmannMachine(Ns, beta, **kwargs)
+        
+    # compute the gradient
+    aves  = np.zeros((Nd, Ns+Ns+Nb))
+    
+    for i, cbits in enumerate(data):
+        BM.setProjector(cbits)
+        if (cmode=='class') and (i!=Nd-1): 
+           aves[i, :Ns] = -1.0*(np.array(cbits)*2-1)*beta
+           for j,bond in enumerate(bonds): 
+               aves[i, 2*Ns+j] = (cbits[bond[0]]*2-1)*(cbits[bond[1]]*2-1)*beta
+        else: 
+            aves[i,:] = BM.computeLocalAverages()
+    
+    del BM
+    gLL = np.sum((aves*weights),  axis=0)
+    
+    gLL = packInter(gLL, Ns, cmode)
+    return gLL
+    
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
 def LLgrad(inter, *args):
@@ -54,7 +102,7 @@ def LLgrad(inter, *args):
     if gradEval:
         st = '    %16.8E' %vLL
         for meas in np.hstack([Hs[:,-1], Ds[:,-1], Js[:,-1]]): st+= '    %16.8E' %meas
-        for meas in gLL:                                       st+= '    %16.8E' %meas
+        for meas in aves[-1,:]:                                st+= '    %16.8E' %meas
         st += '\n'
         
         global fname
@@ -212,12 +260,14 @@ def main():
     Nd   = len(data)
     print '--- Data (%d):    '     %len(data), data
     print '--- Weights (%4.2f) : ' %np.sum(weights) , weights 
-    print '--- Entropy : %4.2f'    %entropy
+    print '--- Entropy : %6.4f'    %entropy
     weights = weights.reshape((Nd,1))
 
     # General an initial guess for the Hamiltonian -----------------------------
-    Hs[:,-1] = np.random.randn(Ns)*np.abs(Hs[:,-1]).max() 
-    Js[:,-1] = np.random.randn(Nb)*np.abs(Js[:,-1]).max()
+    Hs[:,-1] = (rm.rand(Ns)-0.5)*0.1
+    Js[:,-1] = (rm.rand(Nb)-0.5)*0.1
+    #Hs[:,-1] = rm.randn(Ns)*np.abs(Hs[:,-1]).max() 
+    #Js[:,-1] = rm.randn(Nb)*np.abs(Js[:,-1]).max()
     
     if   args['mode'] == 'class':      iparams = np.hstack([Hs[:,-1],                Js[:,-1]])
     elif args['mode'] == 'quant':      iparams = np.hstack([Hs[:,-1], args['delta'], Js[:,-1]])
@@ -264,6 +314,7 @@ def main():
     
     counter = 0
     fx, fLL, info = LBFGS(LLgrad, x0=iparams, args = (Ns, beta, bonds, data, weights, args['mode']), iprint = 1, pgtol=1e-05, factr=1e13/2.2, maxiter=50, callback=progtracker)  
+    #fx, fLL, info = LBFGS(LL, x0=iparams, fprime=grad, args = (Ns, beta, bonds, data, weights, args['mode']), iprint = 1, pgtol=1e-08, factr=1e13/2.2/10000.0, maxiter=500, callback=progtracker)  
 
     print fx
     print info
