@@ -1,5 +1,5 @@
 import Hfile, Hbuilder, bmachine
-import argparse, collections
+import argparse, collections, time
 import numpy.random as rm
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b as LBFGS
@@ -16,6 +16,8 @@ def progtracker(inter):
     return 0
 
 
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 def LL(inter, *args):
     (Ns, beta, bonds, data, weights, cmode) = args   
     Nd = len(data)
@@ -35,6 +37,8 @@ def LL(inter, *args):
     del BM
     return vLL
 
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 def grad(inter, *args):
     (Ns, beta, bonds, data, weights, cmode) = args   
     Nd = len(data)
@@ -67,26 +71,33 @@ def grad(inter, *args):
 #------------------------------------------------------------------------------
 def LLgrad(inter, *args):
     ''' Train all couplings and fields'''
-    (Ns, beta, bonds, data, weights, cmode) = args   
+    (Ns, beta, bonds, data, weights, cmode, totime) = args   
     Nd = len(data)
     Nb = len(bonds) 
     
     # initialize Boltzmann machine 
+    if totime: t0 = time.time()
     Hs, Ds, Js = unpackInter(inter, bonds, Ns, cmode)
     kwargs = {'X': Ds, 'Z1': Hs, 'Z2': Js}
     BM = bmachine.BoltzmannMachine(Ns, beta, **kwargs)
+    if totime: print "--- BM init: %0.4f"  %(time.time() - t0)
         
     # compute the log-likelihood
+    if totime: t0 = time.time()
     vLL = 0
     for i,cbits in enumerate(data[:-1]):
         BM.setProjector(cbits)
         vLL -= np.log(np.real(BM.evaluateProjector())) * weights[i]
+    if totime: print "--- LL comp: %0.4f" %(time.time() - t0)
      
     
     # compute the gradient
+    if totime: 
+        t0 = time.time()
+        ts = []
     aves  = np.zeros((Nd, Ns+Ns+Nb))
-    
     for i, cbits in enumerate(data):
+        if totime: t0i = time.time()
         BM.setProjector(cbits)
         if (cmode=='class') and (i!=Nd-1): 
            aves[i, :Ns] = -1.0*(np.array(cbits)*2-1)*beta
@@ -94,6 +105,12 @@ def LLgrad(inter, *args):
                aves[i, 2*Ns+j] = (cbits[bond[0]]*2-1)*(cbits[bond[1]]*2-1)*beta
         else: 
             aves[i,:] = BM.computeLocalAverages()
+        if totime: ts += [time.time() -t0i]
+    if totime: 
+        print "--- GR eval: %0.4f" %(time.time()-t0)
+        print "---          ",
+        for T in ts:
+            print "%0.4f, " %T,
     
     gLL = np.sum((aves*weights),  axis=0)
 
@@ -171,10 +188,12 @@ def main():
     parser.add_argument('--delta',      help='Transverse field',           type=float)
     parser.add_argument('--beta', '-b', help='Inverse temperature ',       type=float)
     parser.add_argument('--mode',       help='Training mode', choices=modes, default='class')
+    parser.add_argument('--time',       help='Benchmark execution time ',  action='store_true', default=False)
 
     args = vars(parser.parse_args())
     rm.seed(args['seed'])
 
+   
     #  Error handling ---------------------------------------------------------
     if (args['inter'] is None):
        print 'Define interactions'
@@ -313,7 +332,7 @@ def main():
     
     
     counter = 0
-    fx, fLL, info = LBFGS(LLgrad, x0=iparams, args = (Ns, beta, bonds, data, weights, args['mode']), iprint = 1, pgtol=1e-05, factr=1e13/2.2, maxiter=50, callback=progtracker)  
+    fx, fLL, info = LBFGS(LLgrad, x0=iparams, args = (Ns, beta, bonds, data, weights, args['mode'], args['time']), iprint = 1, pgtol=1e-05, factr=1e13/2.2, maxiter=50, callback=progtracker)  
     #fx, fLL, info = LBFGS(LL, x0=iparams, fprime=grad, args = (Ns, beta, bonds, data, weights, args['mode']), iprint = 1, pgtol=1e-08, factr=1e13/2.2/10000.0, maxiter=500, callback=progtracker)  
 
     print fx
