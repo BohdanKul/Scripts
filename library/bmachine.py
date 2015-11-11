@@ -52,13 +52,18 @@ class BoltzmannMachine:
         self.operZs = []
         self.operXs = []
         for site in range(N):
-            self.operZs += [Hbuilder.EmbedOper(Z, N, [site, 1.0], True)]
-            self.operXs += [Hbuilder.EmbedOper(X, N, [site, 1.0], True)]
+            self.operZs += [Hbuilder.EmbedOper(Z, N, [site, 1.0], True).diagonal()]
+            self.operXs += [sparse.csr_matrix(
+                                    Hbuilder.EmbedOper(X, N, [site, 1.0], True)
+                                ).nonzero()[1]]
+            #self.operZs += [Hbuilder.EmbedOper(Z, N, [site, 1.0], True)]
+            #self.operXs += [Hbuilder.EmbedOper(X, N, [site, 1.0], True)]
             
         self.operZZs = []
         for bond in kwargs['Z2'].copy():
             bond[-1] = 1.0 
-            self.operZZs += [Hbuilder.EmbedOper(Z, N, bond, True)]
+            self.operZZs += [Hbuilder.EmbedOper(Z, N, bond, True).diagonal()]
+            #self.operZZs += [Hbuilder.EmbedOper(Z, N, bond, True)]
         
     def setProjector(self, cbits):
         self.bindex = Bits2Int(cbits)
@@ -85,21 +90,18 @@ class BoltzmannMachine:
             U = self.rho/np.sum(self.rho.diagonal())
             aves = np.zeros(self.Ns+self.Ns+self.Nb) 
             for site in range(self.Ns):
-                aves[site] = np.real(np.sum(
-                                            (U*self.operZs[site]).diagonal()
-                                           )
-                                    )
+                aves[site] = np.sum(self.operZs[site]*U.diagonal().T)
+                #aves[site] = np.real(np.sum((U*self.operZs[site]).diagonal()))
             
-                aves[self.Ns+site] += np.real(np.sum(
-                                                    (U*self.operXs[site]).diagonal()
-                                                    )
-                                             )
+                aves[self.Ns+site] = 0 
+                for r,c in enumerate(self.operXs[site]):  
+                    aves[self.Ns+site] += U[c, r]
+                #aves[self.Ns+site] += np.real(np.sum((U*self.operXs[site]).diagonal()))
 
             for i in range(self.Nb):
-                aves[2*self.Ns+i] += np.real(np.sum(
-                                                   (U*self.operZZs[i]).diagonal()
-                                                   )
-                                            )
+                aves[2*self.Ns+i] = np.sum(self.operZZs[i]*U.diagonal().T)
+                #aves[2*self.Ns+i] += np.real(np.sum((U*self.operZZs[i]).diagonal()))
+
             return aves
         else:
             U  = np.matrix(np.zeros((2**self.Ns, 2**self.Ns)), copy=False)
@@ -110,6 +112,7 @@ class BoltzmannMachine:
             eZ  = np.zeros((Nsamples+1,self.Ns))
             eX  = np.zeros((Nsamples+1,self.Ns)) 
             eZZ = np.zeros((Nsamples+1,self.Nb))
+
             # Evaluate time-evolved operators on a discrete grid
             tau = 1.0*self.beta/(2.0*Nsamples)
             #Ub0 = np.matrix(slin.expm( self.H*tau), copy=False)
@@ -120,20 +123,17 @@ class BoltzmannMachine:
                 if  step>0: U = Ub0*U*Uf0
 
                 for site in range(self.Ns):
-                    eZ[step][site] = np.real(np.sum(
-                                                    (self.operZs[site]*U).diagonal()
-                                                   )
-                                            )
-                    eX[step][site] = np.real(np.sum(
-                                                    (self.operXs[site]*U).diagonal()
-                                                    )
-                                            )
-                
+                    eZ[step][site] = np.sum(self.operZs[site]*U.diagonal().T)
+                    #eZ[step][site] = np.real(np.sum((self.operZs[site]*U).diagonal())) 
+                    
+                    eX[step][site] = 0
+                    for r,c in enumerate(self.operXs[site]):  
+                        eX[step][site] += U[c, r]
+                    #eX[step][site] = np.real(np.sum((self.operXs[site]*U).diagonal()))
+               
                 for i in range(self.Nb):
-                    eZZ[step][i] = np.real(np.sum(
-                                                  (self.operZZs[i]*U).diagonal()
-                                                 )
-                                          )
+                    eZZ[step][i] = np.sum(self.operZZs[i]*U.diagonal().T)
+                    #eZZ[step][i] = np.real(np.sum((self.operZZs[i]*U).diagonal()))
         
             # Numerically integrate 
             UE = np.zeros(self.Ns+self.Ns+self.Nb) 
