@@ -71,7 +71,7 @@ def grad(inter, *args):
 #------------------------------------------------------------------------------
 def LLgrad(inter, *args):
     ''' Train all couplings and fields'''
-    (Ns, beta, bonds, data, weights, cmode, totime, noise) = args   
+    (Ns, beta, bonds, data, weights, cmode, totime, noise, P) = args   
     Nd = len(data)
     Nb = len(bonds) 
     
@@ -89,7 +89,11 @@ def LLgrad(inter, *args):
         BM.setProjector(cbits)
         vLL -= np.log(np.real(BM.evaluateProjector())) * weights[i]
     if totime: print "--- LL comp: %0.4f" %(time.time() - t0)
-     
+    
+    # compute the KL-divergence
+    if not(P is None):
+       KL = -np.sum(P*(np.log(BM.rhoN)-np.log(P)))
+
     # compute the gradient
     if totime: 
         t0 = time.time()
@@ -118,6 +122,8 @@ def LLgrad(inter, *args):
     global gradEval
     if gradEval:
         st = '    %16.8E' %vLL
+        if not(P is None):
+           st += '    %16.8E' %KL
         for meas in np.hstack([Hs[:,-1], Ds[:,-1], Js[:,-1]]): st+= '    %16.8E' %meas
         for meas in aves[-1,:]:                                st+= '    %16.8E' %meas
         st += '\n'
@@ -189,6 +195,7 @@ def main():
     parser.add_argument('--seed',       help='Seed used to generate data', type=int, default=0)
     parser.add_argument('--data',       help='Data file',                  type=str)
     parser.add_argument('--inter','-I', help='Interactions file',          type=str)
+    parser.add_argument('--prob', '-P', help='Probability distribution',   type=str)
     parser.add_argument('--delta',      help='Transverse field',           type=float)
     parser.add_argument('--beta', '-b', help='Inverse temperature ',       type=float)
     parser.add_argument('--mode',       help='Training mode', choices=modes, default='class')
@@ -209,6 +216,11 @@ def main():
        return 0
     global mode 
     mode = args['mode']
+
+    #  Load probability distribution ------------------------------------------
+    P = None
+    if not(args['prob'] is None):
+       P = np.loadtxt(args['prob'])  
 
     # Initialize couplings and fields -----------------------------------------
     Ns = 0 
@@ -321,6 +333,8 @@ def main():
     
     f = open(fname, 'w')
     header = '#    %15s' %('LL')
+    if  not(args['prob'] is None): header += '    %16s' %('KL')
+
     for i in range(Hs.shape[0]):   header += '    %16s' %('H'+str(i)) 
     for i in range(Ds.shape[0]):   header += '    %16s' %('D'+str(i)) 
     for bond in Js[:,:2].tolist(): header += '    %16s' %('J(%d, %d)' %(bond[0], bond[1]))
@@ -339,7 +353,7 @@ def main():
     
     
     counter = 0
-    fx, fLL, info = LBFGS(LLgrad, x0=iparams, args = (Ns, beta, bonds, data, weights, args['mode'], args['time'], args['noise']), iprint = 1, pgtol=1e-05, factr=1e13/2.2, maxiter=50, callback=progtracker)  
+    fx, fLL, info = LBFGS(LLgrad, x0=iparams, args = (Ns, beta, bonds, data, weights, args['mode'], args['time'], args['noise'], P), iprint = 1, pgtol=1e-05, factr=1e13/2.2, maxiter=50, callback=progtracker)  
     #fx, fLL, info = LBFGS(LL, x0=iparams, fprime=grad, args = (Ns, beta, bonds, data, weights, args['mode']), iprint = 1, pgtol=1e-08, factr=1e13/2.2/10000.0, maxiter=500, callback=progtracker)  
 
     print fx
