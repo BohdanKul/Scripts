@@ -55,7 +55,7 @@ def getReduceParamMap(fname):
     '''Get the parameters from the output filename.  
     '''
 
-    fileParts  = fname.rstrip('.dat').split('_')
+    fileParts  = os.path.split(fname)[1].rstrip('.dat').split('_')
     fileParts.pop(0)
 
     paramMap = {}

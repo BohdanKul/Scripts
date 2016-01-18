@@ -49,17 +49,29 @@ class BoltzmannMachine:
         #print "max H: ",   np.amax(np.abs(np.array([self.H.max(), self.H.min()]))),\
         #      "max rho: ", np.amax(np.abs(np.array([self.rho.max(), self.rho.min()]))),\
         #      "Z: ",       np.sum(self.rho.diagonal())
-        self.operZs = []
+        self.oper1Zs = []
         self.operXs = []
         for site in range(N):
-            self.operZs += [Hbuilder.EmbedOper(Z, N, [site, 1.0], True)]
-            self.operXs += [Hbuilder.EmbedOper(X, N, [site, 1.0], True)]
+            self.oper1Zs += [Hbuilder.EmbedOper(Z, N, [site, 1.0], True).diagonal()]
+            self.operXs += [sparse.csr_matrix(
+                                    Hbuilder.EmbedOper(X, N, [site, 1.0], True)
+                                ).nonzero()[1]]
+            #self.oper1Zs += [Hbuilder.EmbedOper(Z, N, [site, 1.0], True)]
+            #self.operXs += [Hbuilder.EmbedOper(X, N, [site, 1.0], True)]
             
-        self.operZZs = []
+        self.oper2Zs = []
         for bond in kwargs['Z2'].copy():
             bond[-1] = 1.0 
-            self.operZZs += [Hbuilder.EmbedOper(Z, N, bond, True)]
-        
+            self.oper2Zs += [Hbuilder.EmbedOper(Z, N, bond, True).diagonal()]
+            #self.oper2Zs += [Hbuilder.EmbedOper(Z, N, bond, True)]
+
+        self.oper3Zs = []
+        if 'tribody' in kwargs.keys():
+            for bond in kwargs['tribody'].copy():
+                bond[-1] = 1.0
+                self.oper3Zs += [Hbuilder.EmbedOper(Z, N, bond, True).diagonal()]
+        self.N3b = len(self.oper3Zs)    
+
     def setProjector(self, cbits):
         self.bindex = Bits2Int(cbits)
         self.clamped = False
@@ -85,21 +97,21 @@ class BoltzmannMachine:
             U = self.rho/np.sum(self.rho.diagonal())
             aves = np.zeros(self.Ns+self.Ns+self.Nb) 
             for site in range(self.Ns):
-                aves[site] = np.real(np.sum(
-                                            (U*self.operZs[site]).diagonal()
-                                           )
-                                    )
+                aves[site] = np.sum(self.oper1Zs[site]*U.diagonal().T)
+                #aves[site] = np.real(np.sum((U*self.oper1Zs[site]).diagonal()))
             
-                aves[self.Ns+site] += np.real(np.sum(
-                                                    (U*self.operXs[site]).diagonal()
-                                                    )
-                                             )
+                aves[self.Ns+site] = 0 
+                for r,c in enumerate(self.operXs[site]):  
+                    aves[self.Ns+site] += U[c, r]
+                #aves[self.Ns+site] += np.real(np.sum((U*self.operXs[site]).diagonal()))
 
             for i in range(self.Nb):
-                aves[2*self.Ns+i] += np.real(np.sum(
-                                                   (U*self.operZZs[i]).diagonal()
-                                                   )
-                                            )
+                aves[2*self.Ns+i] = np.sum(self.oper2Zs[i]*U.diagonal().T)
+                #aves[2*self.Ns+i] += np.real(np.sum((U*self.oper2Zs[i]).diagonal()))
+
+            for i in range(self.N3b):
+                aves[2*self.Ns+self.Nb] = np.sum(self.oper3Zs[i]*U.diagonal().T)
+            
             return aves
         else:
             U  = np.matrix(np.zeros((2**self.Ns, 2**self.Ns)), copy=False)
@@ -107,9 +119,11 @@ class BoltzmannMachine:
             U[:, self.bindex]  = self.rho[:,  self.bindex]/Prob
 
             Nsamples = 12 
-            eZ  = np.zeros((Nsamples+1,self.Ns))
-            eX  = np.zeros((Nsamples+1,self.Ns)) 
-            eZZ = np.zeros((Nsamples+1,self.Nb))
+            eZ   = np.zeros((Nsamples+1,self.Ns))
+            eX   = np.zeros((Nsamples+1,self.Ns)) 
+            e2Zs = np.zeros((Nsamples+1,self.Nb))
+            e3Zs = np.zeros((Nsamples+1,self.N3b))
+
             # Evaluate time-evolved operators on a discrete grid
             tau = 1.0*self.beta/(2.0*Nsamples)
             #Ub0 = np.matrix(slin.expm( self.H*tau), copy=False)
@@ -120,30 +134,36 @@ class BoltzmannMachine:
                 if  step>0: U = Ub0*U*Uf0
 
                 for site in range(self.Ns):
-                    eZ[step][site] = np.real(np.sum(
-                                                    (self.operZs[site]*U).diagonal()
-                                                   )
-                                            )
-                    eX[step][site] = np.real(np.sum(
-                                                    (self.operXs[site]*U).diagonal()
-                                                    )
-                                            )
-                
+                    eZ[step][site] = np.sum(self.oper1Zs[site]*U.diagonal().T)
+                    #eZ[step][site] = np.real(np.sum((self.oper1Zs[site]*U).diagonal())) 
+                    
+                    eX[step][site] = 0
+                    for r,c in enumerate(self.operXs[site]):  
+                        eX[step][site] += U[c, r]
+                    #eX[step][site] = np.real(np.sum((self.operXs[site]*U).diagonal()))
+               
                 for i in range(self.Nb):
-                    eZZ[step][i] = np.real(np.sum(
-                                                  (self.operZZs[i]*U).diagonal()
-                                                 )
-                                          )
+                    e2Zs[step][i] = np.sum(self.oper2Zs[i]*U.diagonal().T)
+                    #e2Zs[step][i] = np.real(np.sum((self.oper2Zs[i]*U).diagonal()))
+                
+                for i in range(self.N3b):
+                    e3Zs[step][i] = np.sum(self.oper3Zs[i]*U.diagonal().T)
         
             # Numerically integrate 
-            UE = np.zeros(self.Ns+self.Ns+self.Nb) 
+            UE = np.zeros(self.Ns+self.Ns+self.Nb+self.N3b) 
             xs = np.linspace(0.0, Nsamples+1-1, Nsamples+1)*tau
+            offset = self.Ns
             for site in range(self.Ns):
                 UE[site]            = trapz(eZ[:,site], xs)*2.0
-                UE[self.Ns + site] += trapz(eX[:,site], xs)*2.0
+                UE[offset+site] += trapz(eX[:,site], xs)*2.0
             
+            offset = 2*self.Ns
             for bond in range(self.Nb):
-                UE[2*self.Ns+bond] += [trapz(eZZ[:,bond], xs)*2.0]
-         
+                UE[offset+bond] += [trapz(e2Zs[:,bond], xs)*2.0]
+            
+            offset = 2*self.Ns+self.Nb
+            for bond in range(self.N3b):
+                UE[offset+bond] += [trapz(e3Zs[:,bond], xs)*2.0]
+
             return UE 
         
