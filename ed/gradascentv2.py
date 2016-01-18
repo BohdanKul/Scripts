@@ -4,9 +4,7 @@ import numpy.random as rm
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b as LBFGS
 
-global Ns, Nb, bfirst, beta, fname, mode, delta
-global data, weights, bonds
-(Ns, Nb, bfirst, beta, fname, mode, delta) = (0,0, True,0,'','class', 0)
+(Ns, Nb, counter, beta, fname, mode, delta, gradEval) = (0,0,0,0,'','class', 0, True)
 (data, weights, bonds) = ([],[],[])
 
 #------------------------------------------------------------------------------
@@ -26,10 +24,12 @@ def getLLandAves(Hs, Ds, Js):
     return gLL, aves
 
 
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 def progtracker(inter):
-    global bfirst
-    bfirst = True
-
+    global gradEval 
+    gradEval = True
+    
     return 0
 
 #------------------------------------------------------------------------------
@@ -50,9 +50,9 @@ def LLgrad(inter, *args):
     for i,cbits in enumerate(data[:-1]):
         BM.setProjector(cbits)
         vLL -= np.log(np.real(BM.evaluateProjector())) * weights[i]
-
     # compute the gradient
     aves  = np.zeros((Nd, Ns+Ns+Nb))
+    
     for i, cbits in enumerate(data):
         BM.setProjector(cbits)
         if (cmode=='class') and (i!=Nd-1): 
@@ -61,29 +61,25 @@ def LLgrad(inter, *args):
                aves[i, 2*Ns+j] = (cbits[bond[0]]*2-1)*(cbits[bond[1]]*2-1)*beta
         else: 
             aves[i,:] = BM.computeLocalAverages()
+    
     gLL = np.sum((aves*weights),  axis=0)
+
+    # record the progress into a file
+    global gradEval
+    if gradEval:
+        st = '    %16.8E' %vLL
+        for meas in np.hstack([Hs[:,-1], Ds[:,-1], Js[:,-1]]): st+= '    %16.8E' %meas
+        for meas in gLL:                                       st+= '    %16.8E' %meas
+        st += '\n'
+        
+        global fname
+        f = open(fname, 'a')
+        f.write(st)
+        f.close()
+
+    gradEval = False
     gLL = packInter(gLL, Ns, cmode)
     
-    #------------------------------------------------------------------------------
-    global bfirst
-    if bfirst:
-        global Ns, counter, beta, fname, mode
-        global data, weights, bonds
-
-        # store the values
-        f = open(fname, 'a')
-        str = '    %16.8E' %vLL
-        for meas in np.hstack([Hs[:,-1], Ds[:,-1], Js[:,-1]]):
-            str+= '    %16.8E' %meas
-        for meas in aves[-1,:]:
-            str+= '    %16.8E' %meas
-        
-        str += '\n'
-        
-        f.write(str)
-        f.close()
-        bfirst = False
-
     return vLL, gLL
 
 
@@ -225,10 +221,13 @@ def main():
     weights = np.array(cdata.values())/float(Nd)
     data    = udata
     data += [[]]          # add a vector with no bits clamped
+    entropy = -1.0*np.sum(weights*np.log(weights))
+    print type(weights), entropy
     weights = np.append(weights, -beta) # and its weight
     Nd   = len(data)
-    print '--- Data (%d):    ' %len(data), data
-    print '--- Weights (%4.2f) : '%np.sum(weights) , weights 
+    print '--- Data (%d):    '     %len(data), data
+    print '--- Weights (%4.2f) : ' %np.sum(weights) , weights 
+    print '--- Entropy : %4.2f'    %entropy
     weights = weights.reshape((Nd,1))
 
     # General an initial guess for the Hamiltonian -----------------------------
@@ -248,31 +247,37 @@ def main():
     #    apar = np.abs(par)*f
     #    lims.append((-apar, apar))
 
-    # Compute the log-likelihood of the generating Hamiltonian
-    gLL, aves = getLLandAves(Hs, Ds, Js)
 
-    # Creat a log file 
+    # Creat log file 
     global delta
     if args['delta']!= None: delta=args['delta']
-    global fname 
-    fname = 'train_delta-%04.2f_%s' %(args['delta'], args['data'][5:])
     
+    global fname 
+    fname = 'train_'
+    if args['mode'] == 'class': fname += 'mode-%s_' %args['mode']
+    else:                       fname += 'mode-%s_delta-%04.2f_' %(args['mode'], delta)
+    fname += args['data'][5:]
+    
+    
+    # Record the header
     f = open(fname, 'w')
     header = '#%19s' %('LL')
     for i in range(Hs.shape[0]):   header += '%20s' %('H'+str(i)) 
     for i in range(Ds.shape[0]):   header += '%20s' %('D'+str(i)) 
     for bond in Js[:,:2].tolist(): header += '%20s' %('J(%d, %d)' %(bond[0], bond[1]))
+    
     for i in range(Hs.shape[0]):   header += '%20s' %('<Z'+str(i)+'>') 
     for i in range(Ds.shape[0]):   header += '%20s' %('<X'+str(i)+'>') 
     for bond in Js[:,:2].tolist(): header += '%20s' %('<ZZ(%d, %d)>' %(bond[0], bond[1]))
+    
     header +='\n'
     f.write(header)
 
+    # Compute the log-likelihood of the generating Hamiltonian
+    gLL, aves = getLLandAves(Hs, Ds, Js)
     st = '    %16.8E' %gLL
-    for meas in np.hstack([Hs[:,-1], Ds[:,-1], Js[:,-1]]):
-        st+= '    %16.8E' %meas
-    for meas in aves:
-        st+= '    %16.8E' %meas
+    for meas in np.hstack([Hs[:,-1], Ds[:,-1], Js[:,-1]]): st+= '    %16.8E' %meas
+    for meas in aves:                                      st+= '    %16.8E' %meas
     st += '\n'
     f.write(st)
     f.close()
@@ -283,7 +288,6 @@ def main():
     
     
     fx, fLL, info = LBFGS(LLgrad, x0=iparams, args = (Ns, beta, bonds, data, weights, args['mode']), iprint = 1, pgtol=0.00001, factr=1e13/2.2/1000000.0, callback=progtracker)  
-
     print fx
     print info
     #print lims
