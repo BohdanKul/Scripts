@@ -76,4 +76,25 @@ def GetData(datafile, N, seed, Nsamples = 0, bonds = [], Z = [], X = [], ZZ = []
 
     return data, weights
 
+# ----------------------------------------------------------------------
+def getHeaders(filename):
+    inFile = open(filename,'r');
+    inLine = inFile.readlines();
+    inLine[0] = inLine[0].rstrip()
+    oheaders = inLine[0].split('   ')
+    oheaders.pop(0)
+    nheaders = []
+    for head in oheaders:
+        if head!='': nheaders += [head.replace(' ','')]
+    inFile.close()
+
+    return nheaders
+
+# ----------------------------------------------------------------------
+def cleanData(view):
+    if np.isnan(view[-1, 0]) or (view[-2, 0] < view[-1, 0]):
+        view = view[:-1,:]
+
+    return view
+
 
