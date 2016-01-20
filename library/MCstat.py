@@ -16,58 +16,40 @@ import sys
 # Requires raw Monte Carlo bin data in horizontal rows
 # -----------------------------------------------------------------------------
 def bin(MC):
+    #print MC.shape, MC[:10,0] 
+    B = MC[:]     # copy the dataset
+
+    # Determine  number of binning levels
+    min_bin = 30    # minimum bin size
+    if B.shape[0]<min_bin: Nl = 1 
+    else:                  Nl = int(m.floor(m.log(B.shape[0]/min_bin,2))+1)
     
-    # minimum number of MC bins required
-    min_bin = 30
-
-    #print 'Autoskipped: %i' %(MC.shape[0]-min_bin*2**(Nl-1))
-    # initialize B to MC data
-    #B = MC[MC.shape[0]-min_bin*2**(Nl-1):]
-    B = MC[:]
-
-    # Define number of binning levels
-    if B.shape[0]<min_bin:
-       Nl = 1 
-    else:    
-        Nl = int(m.floor(m.log(B.shape[0]/min_bin,2))+1)
-    # Resize if 1D array
-    if B.ndim == 1:
-        #print("resizing")
-        #print B.shape[0]
-        B.resize(B.shape[0],1)
-
-    # initialize D
-    D = np.zeros((Nl,B.shape[1]))
     
+    if B.ndim == 1: B.resize(B.shape[0],1)  # reshape if 1D array
+    D = np.zeros((Nl, B.shape[1]))          # initialize binning variable
+   
     # First level of binning is raw data
     D[0,:] = np.std(MC,0)/m.sqrt(B.shape[0]-1)
-
+    #print MC[:10,0] 
     
     TruncN = 0
     # Binning loop over levels l
     for l in range(1,Nl):
         # Bin pairs of bins: if odd # of bins, truncate first bin
         if ((B.shape[0] % 2) == 0):
-            B = (B[::2,:]+ B[1::2,:])/2
+            B = (B[::2,:]+ B[1::2,:])/2.0
         else:
-           # print "Truncated bin - level average: %i" %(np.average(B,0)-B[0])
             TruncIndex = TruncN * (2**(Nl-l))    
-            Averaged = (B[TruncIndex]+B[TruncIndex+1]+B[TruncIndex+2])/3
+            Averaged = (B[TruncIndex]+B[TruncIndex+1]+B[TruncIndex+2])/3.0
             if TruncIndex == 0:
-                SecondHalf = (B[TruncIndex+3::2,:]+ B[TruncIndex+4::2,:])/2
-                #print SecondHalf
-                #print [Averaged] 
+                SecondHalf = (B[TruncIndex+3::2,:]+ B[TruncIndex+4::2,:])/2.0
                 B = np.concatenate(([Averaged],SecondHalf),axis=0)
-                #print B
             else:
-                FirstHalf  = (B[0:TruncIndex-2:2,:]+ B[1:TruncIndex-1:2,:])/2 
-                #FirstHalf = np.append(FirstHalf,[[Averaged]],axis=0)
-                SecondHalf = (B[TruncIndex+3::2,:]+ B[TruncIndex+4::2,:])/2
+                FirstHalf  = (B[0:TruncIndex-2:2,:]+ B[1:TruncIndex-1:2,:])/2.0 
+                SecondHalf = (B[TruncIndex+3::2,:]+ B[TruncIndex+4::2,:])/2.0
                 B = np.concatenate((FirstHalf,[Averaged],SecondHalf),axis=0)
             TruncN = TruncN + 1 
-        # Error at level l
-        #if (B.shape[0]%2 == 1): print "Odd number at level %i" %l 
-        #print "Level average: %i" %np.average(B,0)
+        
         D[l,:] = np.std(B,0)/m.sqrt(B.shape[0]-1)
     return D
 # -----------------------------------------------------------------------------
