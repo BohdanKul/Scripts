@@ -49,7 +49,7 @@ def main():
    
 
     # Load projective vector --------------------------------------------------
-    if (args['clamped'] is not None):
+    if not(args['clamped'] is None):
         cbits = np.loadtxt(args['clamped'], dtype='int32')
         cbits = Hfile.MCtoED(cbits)
     else: 
@@ -61,17 +61,21 @@ def main():
     del BM
     
     # Record results to a file
-    fname = 'ED_N-%02d_P-%04d.dat' %(Ns, Bits2Int())
+    if len(cbits) == 0: cid = -1
+    else:               cid = Bits2Int(cbits)
+    fname = 'ED_N-%02d_P-%04d.dat' %(Ns, cid)
     f = open(fname, 'w')
     
-    aves = np.hstack((aves[Ns:Ns+Ns), aves[:Ns], aves[Ns+Ns:]))
-    for i in range(Ds.shape[0]):   header += '%20s' %('<X'+str(i)+'>') 
+    aves = np.hstack((aves[Ns:Ns+Ns], aves[:Ns], aves[Ns+Ns:]))
+    header = '#%19s' %('<X0>')
+    for i in range(1,Ds.shape[0]): header += '%20s' %('<X'+str(i)+'>') 
     for i in range(Hs.shape[0]):   header += '%20s' %('<Z'+str(i)+'>') 
     for bond in Js[:,:2].tolist(): header += '%20s' %('<ZZ(%d, %d)>' %(bond[0], bond[1]))
     header += '\n'
     f.write(header)
 
-    for meas in aves[]:  st+= '    %16.8E' %meas
+    st = ''
+    for meas in aves:  st+= '    %16.8E' %meas
     st += '\n'
         
     f.write(st)
