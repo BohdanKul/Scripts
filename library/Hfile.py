@@ -4,6 +4,27 @@ import bmachine as bm
 from pylab    import real
 import collections
 
+
+#------------------------------------------------------------------------------ 
+#------------------------------------------------------------------------------ 
+def EDtoMC(bits):
+    ''' 
+        Convert between ED and MC representation of Ising degrees of freedom 
+        0 ->  1
+        1 -> -1
+    '''
+    return (-np.array(bits)*2+1).tolist()
+
+#------------------------------------------------------------------------------ 
+#------------------------------------------------------------------------------ 
+def MCtoED(bits):
+    ''' 
+        Convert between MC and ED representation of Ising degrees of freedom 
+        1 ->  0
+       -1 ->  1
+    '''
+    return ((-(np.array(bits)-1))//2).tolist()
+
 #------------------------------------------------------------------------------ 
 #------------------------------------------------------------------------------ 
 def bitfield(n):                                                                   
