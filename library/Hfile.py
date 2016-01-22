@@ -53,12 +53,14 @@ def LoadInters(fname):
 def GetData(datafile, N, seed, Nsamples = 0, bonds = [], Z = [], X = [], ZZ = [], beta = 1.0): 
     # Either from a pre-generated set
     if (datafile is not None):
-        data = np.loadtxt(args['data'])
-        Nclamped = data.shape[1]
+        data = np.loadtxt(datafile, dtype="int")
+        if data.ndim == 1: (Nsamples, Nclamped) = (1, len(data)); data = [data]
+        else:              (Nsamples, Nclamped) = data.shape 
+        
         if Nclamped>N: 
             print 'Training set vectors exceed the graph size'
             return 0
-        Nsamples = data.shape[0]
+        
 
     # Or generate it from a  Hamiltonian at a given beta with help of ED
     else:
@@ -89,8 +91,8 @@ def GetData(datafile, N, seed, Nsamples = 0, bonds = [], Z = [], X = [], ZZ = []
     udata = []
     cdata = collections.OrderedDict()
     for i,d in enumerate(data):
-        if not(d in udata): udata += [d]; cdata[repr(d)]  = 1
-        else:                             cdata[repr(d)] += 1
+        if not(d in udata): udata += [d.tolist()]; cdata[repr(d)]  = 1
+        else:                                      cdata[repr(d)] += 1
     weights = np.array(cdata.values())/float(Nsamples)
     data    = udata
 
