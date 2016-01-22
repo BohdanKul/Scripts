@@ -1,3 +1,4 @@
+import os
 import Hfile, Hbuilder, bmachine
 import argparse, collections, time
 import numpy.random as rm
@@ -329,7 +330,7 @@ def main():
     if args['mode'] == 'class': fname += 'mode-%s_' %args['mode']
     else:                       fname += 'mode-%s_delta-%04.2f_' %(args['mode'], delta)
     fname += 'noise-%04.2f_' %(args['noise'])
-    fname += args['data'][5:]
+    fname += os.path.split(args['data'])[1][5:]
     
     f = open(fname, 'w')
     header = '#    %15s' %('LL')
