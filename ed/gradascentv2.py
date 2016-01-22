@@ -71,7 +71,7 @@ def grad(inter, *args):
     
     for i, cbits in enumerate(data):
         BM.setProjector(cbits)
-        if (cmode=='class') and (i!=Nd-1): 
+        if (cmode in ['class', 'aquant']) and (i!=Nd-1): 
            aves[i, :Ns] = -1.0*(np.array(cbits)*2-1)*beta
            for j,bond in enumerate(bonds): 
                aves[i, 2*Ns+j] = (cbits[bond[0]]*2-1)*(cbits[bond[1]]*2-1)*beta
@@ -115,7 +115,7 @@ def LLgrad(inter, *args):
     for i, cbits in enumerate(data):
         if totime: t0i = time.time()
         BM.setProjector(cbits)
-        if (cmode=='class') and (i!=Nd-1): 
+        if (cmode in ['class', 'aquant']) and (i!=Nd-1): 
            aves[i, :Ns] = -1.0*(np.array(cbits)*2-1)*beta
            for j,bond in enumerate(bonds): 
                aves[i, 2*Ns+j] = (cbits[bond[0]]*2-1)*(cbits[bond[1]]*2-1)*beta
@@ -161,7 +161,7 @@ def unpackInter(inter, bonds, Ns, mode):
         Ds = np.ones(Ns)*D
     elif mode=="quant_all": 
         (Hs, Ds, Js) = np.split(inter, [Ns, Ns+Ns])
-    elif mode=="quant_stat": 
+    elif mode in ["quant_stat", "aquant"]: 
         (Hs, Js) = np.split(inter, [Ns])
         global delta
         Ds = np.ones(Ns)*delta
@@ -183,7 +183,7 @@ def packInter(gLL, Ns, mode):
     if   mode=="class":      return np.hstack([gHs, gJs])
     elif mode=="quant":      return np.hstack([gHs, np.sum(gDs), gJs])
     elif mode=="quant_free":       return np.hstack([gHs, np.sum(gDs)])
-    elif mode=="quant_stat": return np.hstack([gHs, gJs]) 
+    elif mode in ["quant_stat", 'aquant']: return np.hstack([gHs, gJs]) 
     elif mode=="quant_all":  return gLL
 
     
@@ -199,7 +199,7 @@ def bitfield(n):
 #------------------------------------------------------------------------------
 def main(): 
 
-    modes  =  ['class', 'quant', 'quant_all', 'quant_stat','quant_free'] 
+    modes  =  ['class', 'quant', 'quant_all', 'quant_stat','quant_free', 'aquant'] 
     
     # setup the command line parser options 
     parser = argparse.ArgumentParser(description='')
@@ -221,7 +221,7 @@ def main():
        print 'Define interactions'
        return 0
 
-    if ((args['mode'] in ['quant', 'quant_all', 'quant_stat']) and (args['delta'] is None)):
+    if ((args['mode'] in ['quant', 'quant_all', 'quant_stat', 'aquant']) and (args['delta'] is None)):
        print 'Define the transverse field of the quantum model'
        return 0
     global mode 
@@ -313,7 +313,8 @@ def main():
     if   args['mode'] == 'class':      iparams = np.hstack([Hs[:,-1],                Js[:,-1]])
     elif args['mode'] == 'quant':      iparams = np.hstack([Hs[:,-1], args['delta'], Js[:,-1]])
     elif args['mode'] == 'quant_all':  iparams = np.hstack([Hs[:,-1], Ds[:,-1],      Js[:,-1]])
-    elif args['mode'] == 'quant_stat': iparams = np.hstack([Hs[:,-1],                Js[:,-1]])
+    elif args['mode'] in ['quant_stat', 'aquant']: 
+                                       iparams = np.hstack([Hs[:,-1],                Js[:,-1]])
     elif args['mode'] == 'quant_free': iparams = np.hstack([Hs[:,-1], args['delta']])
 
  
