@@ -91,8 +91,8 @@ def GetData(datafile, N, seed, Nsamples = 0, bonds = [], Z = [], X = [], ZZ = []
     udata = []
     cdata = collections.OrderedDict()
     for i,d in enumerate(data):
-        if not(d in udata): udata += [d.tolist()]; cdata[repr(d)]  = 1
-        else:                                      cdata[repr(d)] += 1
+        if not(d.tolist() in udata): udata += [d.tolist()]; cdata[repr(d)]  = 1
+        else:                                               cdata[repr(d)] += 1
     weights = np.array(cdata.values())/float(Nsamples)
     data    = udata
 
