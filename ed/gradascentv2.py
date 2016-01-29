@@ -13,7 +13,7 @@ def getLLandAves(Hs, Ds, Js):
     kwargs = {'X': Ds, 'Z1': Hs, 'Z2': Js}
     BM = bmachine.BoltzmannMachine(Ns, beta, **kwargs)
     gLL = 0
-    for i, cbits in enumerate(data):
+    for i, cbits in enumerate(data[:-1]):
         BM.setProjector(cbits)
         gLL -= np.log(np.real(BM.evaluateProjector()))*weights[i]
 
