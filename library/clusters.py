@@ -1,9 +1,39 @@
 import os,sys
+# -----------------------------------------------------------------------------
+def graham(commandLines, run, memory):
+    ''' Write a pbs submit script for CLUMEQ. '''
+
+   # Open the pbs file and write its header
+    numOptions = len(commandLines)
+    fileName = 'run_%s.sh' % run
+
+    pbsFile = open(fileName,'w')
+    pbsFile.write('''#!/bin/bash
+#!/bin/bash
+#SBATCH --time 168:00:00
+#SBATCH --output=run_%s.out
+#SBATCH --mem-per-cpu=%s
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1\n''' %(memory, run))
+    pbsFile.write('''
+case $SLURM_ARRAY_TASK_ID in\n''')
+    # Create the command string and make the case structure
+    for n in range(numOptions):
+        pbsFile.write('%d)\n' % (n))
+        pbsFile.write('%s &\n' %  (commandLines[n]))
+        pbsFile.write(';;\n')
+    pbsFile.write('esac\nwait\n')
+
+
+    pbsFile.close();
+
+    print '\nSubmit jobs with: sbatch --array 1-%d %s\n' % (numOptions, fileName)
+
 
 # -----------------------------------------------------------------------------
 def clumeq(commandLines,run):
     ''' Write a pbs submit script for CLUMEQ. '''
-   
+
    # Open the pbs file and write its header
     numOptions = len(commandLines)
     fileName = 'submit-pimc_%s_clumeq.pbs' % run
@@ -14,12 +44,12 @@ def clumeq(commandLines,run):
 #PBS -l walltime=48:00:00
 #PBS -V MOAB_JOBARRAYINDEX
 #PBS -l nodes=1:ppn=8\n''')
-    pbsFile.write('#PBS -N run-%s\n#PBS -e out/run-%s-%%J-%%I\n#PBS -o out/run-%s-%%J-%%I\n' % (run,run,run)) 
+    pbsFile.write('#PBS -N run-%s\n#PBS -e out/run-%s-%%J-%%I\n#PBS -o out/run-%s-%%J-%%I\n' % (run,run,run))
     if (numOptions%8==0):
         numNodes = numOptions//8
     else:
         numNodes = numOptions//8+1
-    pbsFile.write('#PBS -t [1-%d]\n ' % (numNodes))  
+    pbsFile.write('#PBS -t [1-%d]\n ' % (numNodes))
     pbsFile.write('''
 cd ${PBS_O_WORKDIR}
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/bkulchytskyy/gcc/lib:/opt/torque/lib:/opt/moab/lib:
@@ -46,9 +76,9 @@ case $MOAB_JOBARRAYINDEX in\n''')
         pbsFile.write(';;\n')
     pbsFile.write('esac\nwait\n')
 
-    
+
     pbsFile.close();
-    
+
     print '\nSubmit jobs with: msub %s\n' % (fileName)
 
 # -----------------------------------------------------------------------------
@@ -78,10 +108,10 @@ case ${PBS_ARRAYID} in\n''')
     # Create the command string and make the case structure
     for n in range(numOptions):
         pbsFile.write('%d)\nsleep %d\n%s\n;;\n' % (n,2*n,commandLines[n]))
-    
+
     pbsFile.write('esac\nwait\n')
     pbsFile.close();
-    
+
     print '\nSubmit jobs with: qsub -t 0-%d %s\n' % (numOptions-1,fileName)
 
 # -----------------------------------------------------------------------------
@@ -108,7 +138,7 @@ def sharcnet(commandLines,run):
 # -----------------------------------------------------------------------------
 def scinet(commandLines,run):
     ''' Write a pbs submit script for scinet. '''
-    
+
     numOptions = len(commandLines)
     if numOptions != 8:
         print 'For scinet, must submit in multiples of 8'
@@ -168,9 +198,9 @@ case ${PBS_ARRAYID} in\n''')
     # Create the command string and make the case structure
     for n in range(numOptions):
         pbsFile.write('%d)\nsleep %d\n%s\n;;\n' % (n,2*n,commandLines[n]))
-    
+
     pbsFile.write('esac\nwait\necho \"Finished run at: `date`\"')
     pbsFile.close();
-    
+
     print '\nSubmit jobs with: qsub -t 0-%d %s\n' % (numOptions-1,fileName)
 

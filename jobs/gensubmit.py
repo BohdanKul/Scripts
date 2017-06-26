@@ -1,4 +1,4 @@
-#!/usr/bin/python 
+#!/usr/bin/python
 #
 # gensubmit.py
 # Adrian Del Maestro
@@ -12,20 +12,21 @@ from argparse import ArgumentParser
 
 
 # -----------------------------------------------------------------------------
-# Begin Main Program 
+# Begin Main Program
 # -----------------------------------------------------------------------------
-def main(): 
+def main():
 
-    # setup the command line parser options 
-    parser = ArgumentParser(description="Build submission scripts for various clusters") 
+    # setup the command line parser options
+    parser = ArgumentParser(description="Build submission scripts for various clusters")
     parser.add_argument("file", help='configuration file')
     parser.add_argument('-b','--batch', type=int, help='Turn on batch mode. Sets the number of RG seeds.')
     parser.add_argument('-s','--shift', type=int, default = 0, help='Seed shift for the batch job')
-    parser.add_argument("cluster", metavar="cluster", choices=['clumeq','westgrid','sharcnet','scinet','bluemoon'],\
-            help="target cluster: [westgrid,sharcnet,scinet,clumeq,bluemoon]") 
-    parser.add_argument("-r",type=str, dest='run', default="",help="optional JobId number that will be added to the scripts name")
+    parser.add_argument("cluster", metavar="cluster", choices=['graham', 'clumeq','westgrid','sharcnet','scinet','bluemoon'],\
+            help="target cluster: [graham,westgrid,sharcnet,scinet,clumeq,bluemoon]")
+    parser.add_argument("-r",type=str, dest='run', default="",help="JobId number that will be added to the scripts name")
+    parser.add_argument("--memory",type=str, dest='memory', default="",help="Memory requirement to run the job in string format")
     # parse the command line options
-    args = parser.parse_args() 
+    args = parser.parse_args()
     inFileName = args.file
 
     if (not args.cluster):
@@ -39,7 +40,7 @@ def main():
     staticPIMCOps = inLines[0].rstrip('\n')
 
     # The next lines contains the short-name of the pimc option
-    # and a list of values.  
+    # and a list of values.
     optionValue = {}
     numOptions = {}
     for line in inLines[1:]:
@@ -82,24 +83,23 @@ def main():
             	optionValue[flag] = option
             	numOptions[flag]  = len(option)
 
-    # We make sure all option strings have the same length 
+    # We make sure all option strings have the same length
     if numOptions:
         num = numOptions[flag]
         for (flag,n) in numOptions.iteritems():
-           print (flag,n)        
+           print (flag,n)
 	   if n != num:
                 print flag, ' ', n
 		print 'Not all parameters have the same number of values!', num
                 sys.exit()
-                
+
     commandLines = []
     print optionValue
     index = 0
     for i in range(0,num):
-        commandLine = './ssexy.e '
+        commandLine = staticPIMCOps
         for flag,val in optionValue.iteritems():
-            commandLine += '-%s %s ' % (flag,val[i])
-        commandLine += staticPIMCOps
+            commandLine += ' --%s %s ' % (flag,val[i])
         commandLines.append(commandLine)
 
     ncommandLines = []
@@ -108,22 +108,14 @@ def main():
             for commandLine in commandLines:
                 ncommandLines.append(commandLine + ' -p %d ' %j)
         commandLines=ncommandLines
-    
-    if args.cluster == 'westgrid':
-        clusters.westgrid(commandLines,args.run)
 
-    if args.cluster == 'sharcnet':
-        clusters.sharcnet(commandLines,args.run)
-
-    if args.cluster == 'scinet':
-        clusters.scinet(commandLines,args.run)
-
-    if args.cluster == 'clumeq':
-        clusters.clumeq(commandLines,args.run)
-
-    if args.cluster == 'bluemoon':
-        clusters.bluemoon(commandLines,args.run)
+    if args.cluster == 'graham':   clusters.graham(   commandLines, args.run, args.memory)
+    if args.cluster == 'scinet':   clusters.scinet(   commandLines, args.run)
+    if args.cluster == 'clumeq':   clusters.clumeq(   commandLines, args.run)
+    if args.cluster == 'bluemoon': clusters.bluemoon( commandLines, args.run)
+    if args.cluster == 'westgrid': clusters.westgrid( commandLines, args.run)
+    if args.cluster == 'sharcnet': clusters.sharcnet( commandLines, args.run)
 
 # ----------------------------------------------------------------------
-if __name__ == "__main__": 
+if __name__ == "__main__":
     main()
