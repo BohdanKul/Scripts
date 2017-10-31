@@ -1,3 +1,8 @@
+# Gradient descent implementation for various kinds of Boltzmann Machines.
+# It supports networks with visible units only.
+# This script was used to generate plots for the first submitted version of the QBM paper.
+
+
 import Hfile, Hbuilder, bmachine
 import argparse, collections, time, os
 import numpy.random as rm
