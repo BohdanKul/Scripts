@@ -5,16 +5,16 @@ def graham(commandLines, run, memory):
 
    # Open the pbs file and write its header
     numOptions = len(commandLines)
-    fileName = 'run_%s.sh' % run
+    fileName = 'submit_%s.sh' % run
 
     pbsFile = open(fileName,'w')
     pbsFile.write('''#!/bin/bash
 #!/bin/bash
 #SBATCH --time 168:00:00
-#SBATCH --output=run_%s.out
+#SBATCH --output=output_%s
 #SBATCH --mem-per-cpu=%s
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1\n''' %(memory, run))
+#SBATCH --cpus-per-task=1\n''' %(run, memory))
     pbsFile.write('''
 case $SLURM_ARRAY_TASK_ID in\n''')
     # Create the command string and make the case structure
